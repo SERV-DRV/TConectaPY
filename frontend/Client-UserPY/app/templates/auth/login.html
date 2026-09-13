@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Conecta - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+        <h1 class="text-2xl font-bold text-[#1801a9] mb-1">T-Conecta</h1>
+        <p class="text-gray-500 mb-6">Movilidad Inteligente</p>
+        {% if error %}
+        <div class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{{ error }}</div>
+        {% endif %}
+
+        {% if mode == "register" %}
+        <!-- Register -->
+        <form method="post" action="/auth/register" class="space-y-4">
+            <input type="text" name="cui" placeholder="CUI (13 digitos)" required pattern="\d{13}" maxlength="13"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9]">
+            <input type="email" name="email" placeholder="Correo electronico" required
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9]">
+            <input type="password" name="password" placeholder="Contrasena (min 6)" required minlength="6"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9]">
+            <button type="submit" class="w-full bg-[#46bf00] text-white py-2 rounded-lg hover:bg-[#3da000]">Registrarse</button>
+        </form>
+        <p class="text-center text-sm mt-4">Ya tienes cuenta? <a href="/auth/login" class="text-[#1801a9] font-semibold">Iniciar sesion</a></p>
+        {% else %}
+        <!-- Login -->
+        <form method="post" action="/auth/login" class="space-y-4">
+            <input type="text" name="cui" placeholder="CUI (13 digitos)" required pattern="\d{13}" maxlength="13"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9]">
+            <input type="password" name="password" placeholder="Contrasena"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9]">
+            <button type="submit" class="w-full bg-[#1801a9] text-white py-2 rounded-lg hover:bg-[#15018a]">Iniciar sesion</button>
+        </form>
+        <p class="text-center text-sm mt-4">No tienes cuenta? <a href="/auth/login?mode=register" class="text-[#46bf00] font-semibold">Registrarse</a></p>
+        {% endif %}
+    </div>
+</body>
+</html>

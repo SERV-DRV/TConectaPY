@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 py-6 px-4">
+    <!-- Saldo Header Card -->
+    <div class="bg-gradient-to-r from-[#1801a9] to-indigo-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
+        <div class="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-[#46bf00]/20 rounded-full blur-2xl"></div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-widest text-[#46bf00]">
+                    Billetera Ciudadana T-Conecta
+                </span>
+                <p class="text-sm text-gray-300 mt-1">Saldo Disponible</p>
+                <h1 class="text-5xl font-black mt-2 tracking-tight text-white">
+                    Q{{ "%.2f"|format(balance|default(0)) }}
+                </h1>
+            </div>
+
+            <!-- Flipping Credit Card Visual -->
+            <div style="perspective: 1000px;" class="w-full md:w-80 h-48 mx-auto mt-4 md:mt-0 z-10">
+                <div id="cardInner" class="relative w-full h-full" style="transform-style: preserve-3d; transition: transform 0.6s; transform: rotateY(0deg);">
+                    <!-- Front Side -->
+                    <div id="cardFront" class="absolute inset-0 bg-gradient-to-tr from-[#004e92] to-[#000428] border border-white/20 rounded-2xl p-5 flex flex-col justify-between shadow-2xl overflow-hidden" style="backface-visibility: hidden;">
+                        <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white opacity-5"></div>
+                        <div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full bg-white opacity-10"></div>
+                        
+                        <div class="flex justify-between items-start z-10">
+                            <span class="font-black text-white text-xl tracking-wider uppercase">T-CONECTA</span>
+                        </div>
+                        <div class="w-10 h-8 bg-yellow-400/80 rounded-md border-2 border-yellow-500/50 mt-2 z-10 shadow-sm flex flex-col justify-evenly p-1">
+                            <div class="w-full h-px bg-yellow-600/30"></div>
+                            <div class="w-full h-px bg-yellow-600/30"></div>
+                        </div>
+                        <div class="mt-auto z-10 flex flex-col gap-1">
+                            <span class="font-mono text-gray-200 text-lg tracking-[0.15em] min-h-[28px]" id="cardNumberDisplay">
+                                **** **** **** {{ balance_last4|default('0000') }}
+                            </span>
+                            <div class="flex justify-between items-end mt-1">
+                                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                    Titular<br/><span class="text-gray-200">{{ user.cui|default('USUARIO') }}</span>
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider text-right">
+                                    Exp<br/><span class="text-gray-200" id="cardExpDisplay">{{ expiry_date|default('12/28') }}</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Back Side -->
+                    <div id="cardBack" class="absolute inset-0 bg-gradient-to-tr from-[#004e92] to-[#000428] border border-white/20 rounded-2xl flex flex-col justify-between shadow-2xl overflow-hidden py-5" style="backface-visibility: hidden; transform: rotateY(180deg);">
+                        <div class="w-full h-10 bg-black/80 mt-2"></div>
+                        <div class="px-5 w-full">
+                            <span class="text-[9px] text-gray-300 font-bold ml-1">Firma Autorizada</span>
+                            <div class="w-full h-8 bg-white/90 rounded flex items-center justify-end px-3">
+                                <span class="font-mono italic text-black font-bold tracking-widest" id="cvvDisplay">***</span>
+                            </div>
+                        </div>
+                        <div class="px-5 text-[8px] text-gray-400 text-justify mt-2 leading-tight">
+                            Esta tarjeta es emitida y administrada por T-Conecta. El uso de la misma se rige por los términos y condiciones vigentes.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+        <!-- Tabs Header -->
+        <div class="flex border-b border-gray-100">
+            <a href="/wallet?tab=recharge" class="flex-1 py-4 font-bold text-sm transition-colors text-center {% if tab == 'recharge' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+                Recargar Saldo Virtual
+            </a>
+            <a href="/wallet?tab=purchase" class="flex-1 py-4 font-bold text-sm transition-colors text-center {% if tab == 'purchase' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+                Adquirir Tarjeta Ciudadana (Q20.00)
+            </a>
+            <a href="/wallet?tab=history" class="flex-1 py-4 font-bold text-sm transition-colors text-center flex items-center justify-center gap-1 {% if tab == 'history' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+                Historial
+            </a>
+        </div>
+
+        <!-- Tab Body -->
+        <div class="p-6 md:p-8">
+            {% if tab == "recharge" %}
+            <form method="post" action="/wallet/recharge" class="space-y-4 max-w-lg mx-auto">
+                <h2 class="text-lg font-bold text-[#1801a9] mb-4">Pasarela de Recarga Segura</h2>
+                <div>
+                    <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Monto a Recargar (GTQ)</label>
+                    <div class="grid grid-cols-4 gap-2 mb-2">
+                        <button type="button" onclick="setAmount(10)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q10.00</button>
+                        <button type="button" onclick="setAmount(20)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q20.00</button>
+                        <button type="button" onclick="setAmount(50)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q50.00</button>
+                        <button type="button" onclick="setAmount(100)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q100.00</button>
+                    </div>
+                    <input name="amount" id="amount" type="number" min="1" required placeholder="Ingrese el monto" class="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Número de Tarjeta</label>
+                    <input name="cardNumber" type="text" maxlength="16" required placeholder="4532015112830366" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Expiración</label>
+                        <input name="expirationDate" type="text" required placeholder="MM/YY" pattern="\d{2}/\d{2}" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">CVV</label>
+                        <input name="cvv" type="password" maxlength="4" required placeholder="123" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[#46bf00] hover:bg-[#3da300] text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm mt-4">
+                    Procesar Recarga
+                </button>
+            </form>
+
+            {% elif tab == "purchase" %}
+            <form method="post" action="/wallet/purchase-card" class="space-y-4 max-w-lg mx-auto">
+                <div class="bg-[#46bf00]/20 border border-[#46bf00]/40 p-4 rounded-xl mb-4">
+                    <h3 class="font-bold text-[#1801a9] text-sm">Beneficios de la Tarjeta Ciudadana:</h3>
+                    <ul class="text-xs text-gray-700 list-disc list-inside mt-2 space-y-1">
+                        <li>Emisión de tarjeta virtual asociada a tu CUI.</li>
+                        <li>Acreditación inmediata de 5 viajes de cortesía.</li>
+                        <li>Acceso a torniquetes inteligentes de Transmetro y TuBus.</li>
+                    </ul>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Número de Tarjeta</label>
+                    <input name="cardNumber" type="text" maxlength="16" required placeholder="4532015112830366" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Expiración</label>
+                        <input name="expirationDate" type="text" required placeholder="MM/YY" pattern="\d{2}/\d{2}" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">CVV</label>
+                        <input name="cvv" type="password" maxlength="4" required placeholder="123" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[#1801a9] hover:opacity-90 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm mt-4">
+                    Comprar Tarjeta Ciudadana (Q20.00)
+                </button>
+            </form>
+
+            {% elif tab == "history" %}
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-[#1801a9] mb-4">Historial de Recargas</h2>
+                {% if not history %}
+                <div class="text-center py-10 text-gray-400">
+                    <p class="text-sm font-medium">No hay recargas registradas</p>
+                    <p class="text-xs mt-1">Tus recargas aparecerán aquí</p>
+                </div>
+                {% else %}
+                <div class="space-y-2 max-w-lg mx-auto">
+                    {% for h in history %}
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-[#46bf00]/10 text-[#46bf00] rounded-full flex items-center justify-center font-bold text-sm">Q</div>
+                            <div>
+                                <p class="font-bold text-sm text-gray-900">+Q{{ "%.2f"|format(h.get("amount", 0)) }}</p>
+                                <p class="text-xs text-gray-500">{{ h.get("date", "-") }}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 text-xs font-semibold text-emerald-800 bg-emerald-100 rounded-full">Acreditado</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-center gap-2 mt-6">
+                    {% if page > 1 %}<a href="/wallet?tab=history&page={{ page-1 }}" class="px-4 py-2 rounded-lg border text-sm font-bold text-gray-600 hover:bg-gray-50">Anterior</a>{% endif %}
+                    <span class="px-4 py-2 text-sm font-bold text-[#1801a9] bg-gray-50 rounded-lg">Página {{ page }} de {{ total_pages }}</span>
+                    {% if page < total_pages %}<a href="/wallet?tab=history&page={{ page+1 }}" class="px-4 py-2 rounded-lg border text-sm font-bold text-gray-600 hover:bg-gray-50">Siguiente</a>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function setAmount(val) { document.getElementById('amount').value = val; }
+
+/* 3D Flip Card Logic */
+document.querySelectorAll('input[name="cvv"]').forEach(function(input) {
+    input.addEventListener('focus', function() {
+        document.getElementById('cardInner').style.transform = 'rotateY(180deg)';
+    });
+    input.addEventListener('blur', function() {
+        document.getElementById('cardInner').style.transform = 'rotateY(0deg)';
+    });
+    input.addEventListener('input', function() {
+        var val = this.value.replace(/\D/g, '');
+        document.getElementById('cvvDisplay').textContent = val ? val.replace(/./g, '*') : '***';
+    });
+});
+
+/* Real-time card number and exp update from form inputs */
+document.querySelectorAll('input[name="cardNumber"]').forEach(function(input) {
+    input.addEventListener('input', function() {
+        var number = this.value.replace(/\s/g, '').replace(/\D/g, '');
+        var formatted = number.match(/.{1,4}/g);
+        document.getElementById('cardNumberDisplay').textContent = formatted ? formatted.join(' ') : '**** **** **** {{ balance_last4|default("0000") }}';
+    });
+});
+document.querySelectorAll('input[name="expirationDate"]').forEach(function(input) {
+    input.addEventListener('input', function() {
+        document.getElementById('cardExpDisplay').textContent = this.value || '{{ expiry_date|default("12/28") }}';
+    });
+});
+</script>
+{% endblock %}

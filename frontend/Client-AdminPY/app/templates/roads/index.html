@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Rutas</h1>
+    <button onclick="document.getElementById('modal').classList.remove('hidden')" class="bg-[#46bf00] text-white px-4 py-2 rounded-lg hover:bg-[#3da000]">+ Nueva Ruta</button>
+</div>
+<div class="bg-white rounded-xl shadow p-4 mb-4 flex gap-4">
+    <select id="filterStatus" onchange="filterRoads()" class="border rounded-lg px-3 py-2">
+        <option value="">Todos los estados</option>
+        <option value="ACTIVE" {% if status == "ACTIVE" %}selected{% endif %}>Activo</option>
+        <option value="INACTIVE" {% if status == "INACTIVE" %}selected{% endif %}>Inactivo</option>
+        <option value="MAINTENANCE" {% if status == "MAINTENANCE" %}selected{% endif %}>Mantenimiento</option>
+        <option value="CLOSED" {% if status == "CLOSED" %}selected{% endif %}>Cerrado</option>
+    </select>
+    <select id="filterType" onchange="filterRoads()" class="border rounded-lg px-3 py-2">
+        <option value="">Todos los tipos</option>
+        <option value="EXPRESS" {% if typeRoad == "EXPRESS" %}selected{% endif %}>Express</option>
+        <option value="RELEVOS" {% if typeRoad == "RELEVOS" %}selected{% endif %}>Relevos</option>
+        <option value="CENTRALES" {% if typeRoad == "CENTRALES" %}selected{% endif %}>Centrales</option>
+    </select>
+</div>
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="w-full min-w-[800px]">
+        <thead class="bg-gray-100"><tr>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Codigo</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Nombre</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Tipo</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Puntos</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Estado</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Acciones</th>
+        </tr></thead>
+        <tbody>
+        {% for road in roads %}
+        <tr class="border-t hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm font-mono">{{ road.routeCode }}</td>
+            <td class="px-4 py-3 text-sm">{{ road.name }}</td>
+            <td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700">{{ road.typeRoad }}</span></td>
+            <td class="px-4 py-3 text-sm">{{ road.path.coordinates|length if road.path else 0 }}</td>
+            <td class="px-4 py-3 text-sm">
+                {% if road.status == "ACTIVE" %}<span class="text-green-600">Activo</span>
+                {% elif road.status == "INACTIVE" %}<span class="text-gray-600">Inactivo</span>
+                {% elif road.status == "MAINTENANCE" %}<span class="text-yellow-600">Mantenimiento</span>
+                {% elif road.status == "CLOSED" %}<span class="text-red-600">Cerrado</span>
+                {% else %}<span class="text-gray-600">{{ road.status }}</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm flex gap-2 items-center">
+                <button onclick='openEditRoad({{ road._id|tojson }}, {{ road.name|tojson }}, {{ road.routeCode|tojson }}, {{ road.typeRoad|tojson }})' class="text-xs text-blue-600 hover:underline">Editar</button>
+                <form method="post" action="/roads/{{ road._id }}/status" class="inline">
+                    <select name="status" onchange="this.form.submit()" class="text-xs border rounded px-2 py-1">
+                        <option value="ACTIVE" {% if road.status == "ACTIVE" %}selected{% endif %}>Activo</option>
+                        <option value="INACTIVE" {% if road.status == "INACTIVE" %}selected{% endif %}>Inactivo</option>
+                        <option value="MAINTENANCE" {% if road.status == "MAINTENANCE" %}selected{% endif %}>Mantenimiento</option>
+                        <option value="CLOSED" {% if road.status == "CLOSED" %}selected{% endif %}>Cerrado</option>
+                    </select>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="flex justify-center gap-2 mt-4">
+    {% if page > 1 %}
+    <a href="?page={{ page - 1 }}&status={{ status }}&typeRoad={{ typeRoad }}" class="px-3 py-1 rounded border">Anterior</a>
+    {% endif %}
+    <span class="px-3 py-1">Pagina {{ page }} de {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}&status={{ status }}&typeRoad={{ typeRoad }}" class="px-3 py-1 rounded border">Siguiente</a>
+    {% endif %}
+</div>
+<!-- Modal Crear -->
+<div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Nueva Ruta</h2>
+            <button onclick="document.getElementById('modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">&times;</button>
+        </div>
+        <form method="post" action="/roads" class="space-y-4">
+            <input name="name" placeholder="Nombre de la ruta" required class="w-full border rounded-lg px-3 py-2">
+            <input name="routeCode" placeholder="Codigo (ej: L1)" required class="w-full border rounded-lg px-3 py-2">
+            <select name="typeRoad" class="w-full border rounded-lg px-3 py-2">
+                <option value="CENTRALES">Centrales</option>
+                <option value="EXPRESS">Express</option>
+                <option value="RELEVOS">Relevos</option>
+            </select>
+            <div>
+                <label class="block text-sm font-medium mb-1">Estacion Inicio</label>
+                <select id="stationStart" name="stationStart" onchange="updateRoute()" required class="w-full border rounded-lg px-3 py-2">
+                    <option value="">Seleccionar estacion...</option>
+                    {% for s in available_stations %}
+                    <option value="{{ s.stationCode }}" data-lat="{{ s.location.coordinates[1] }}" data-lng="{{ s.location.coordinates[0] }}">{{ s.name }} ({{ s.stationCode }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Estacion Final</label>
+                <select id="stationEnd" name="stationEnd" onchange="updateRoute()" required class="w-full border rounded-lg px-3 py-2">
+                    <option value="">Seleccionar estacion...</option>
+                    {% for s in available_stations %}
+                    <option value="{{ s.stationCode }}" data-lat="{{ s.location.coordinates[1] }}" data-lng="{{ s.location.coordinates[0] }}">{{ s.name }} ({{ s.stationCode }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="hidden" name="coordinates" id="coords-input" required>
+            <input type="hidden" name="stations" id="stations-input" value="">
+            <div id="map" style="height:250px" class="rounded-lg border"></div>
+            <button type="submit" class="w-full bg-[#46bf00] text-white py-2 rounded-lg hover:bg-[#3da000]">Crear Ruta</button>
+        </form>
+    </div>
+</div>
+<!-- Modal Editar -->
+<div id="editModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Editar Ruta</h2>
+            <button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">&times;</button>
+        </div>
+        <form id="editForm" method="post" class="space-y-4">
+            <input type="hidden" name="name" id="edit-name">
+            <input type="hidden" name="routeCode" id="edit-routeCode">
+            <input type="hidden" name="typeRoad" id="edit-typeRoad">
+            <input type="hidden" name="coordinates" id="edit-coordinates">
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p class="text-sm"><strong>Nombre:</strong> <span id="view-name"></span></p>
+                <p class="text-sm"><strong>Codigo:</strong> <span id="view-code"></span></p>
+                <p class="text-sm"><strong>Tipo:</strong> <span id="view-type"></span></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Nuevo Nombre</label>
+                <input type="text" id="edit-name-input" class="w-full border rounded-lg px-3 py-2" oninput="syncEditFields()">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Nuevo Tipo</label>
+                <select id="edit-type-select" class="w-full border rounded-lg px-3 py-2" onchange="syncEditFields()">
+                    <option value="CENTRALES">Centrales</option>
+                    <option value="EXPRESS">Express</option>
+                    <option value="RELEVOS">Relevos</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Guardar Cambios</button>
+        </form>
+    </div>
+</div>
+<script>
+function filterRoads() {
+    const s = document.getElementById('filterStatus').value;
+    const t = document.getElementById('filterType').value;
+    window.location.href = `/roads?status=${s}&typeRoad=${t}`;
+}
+let map = null, startMarker = null, endMarker = null, routeLine = null;
+document.addEventListener('DOMContentLoaded', () => {
+    map = L.map('map').setView([14.62, -90.52], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+});
+function updateRoute() {
+    const startSel = document.getElementById('stationStart');
+    const endSel = document.getElementById('stationEnd');
+    const coordsInput = document.getElementById('coords-input');
+    const stationsInput = document.getElementById('stations-input');
+    const startOpt = startSel.options[startSel.selectedIndex];
+    const endOpt = endSel.options[endSel.selectedIndex];
+    if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+    if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    const coords = [], stationCodes = [];
+    if (startSel.value) {
+        const lat = parseFloat(startOpt.dataset.lat), lng = parseFloat(startOpt.dataset.lng);
+        startMarker = L.marker([lat, lng]).addTo(map).bindPopup('Inicio').openPopup();
+        coords.push([lng, lat]); stationCodes.push(startSel.value);
+        map.setView([lat, lng], 14);
+    }
+    if (endSel.value) {
+        const lat = parseFloat(endOpt.dataset.lat), lng = parseFloat(endOpt.dataset.lng);
+        endMarker = L.marker([lat, lng]).addTo(map).bindPopup('Final');
+        coords.push([lng, lat]); stationCodes.push(endSel.value);
+        if (coords.length === 2) {
+          const lon1 = coords[0][0], lat1 = coords[0][1];
+          const lon2 = coords[1][0], lat2 = coords[1][1];
+          fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?geometries=geojson`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.routes && data.routes.length > 0) {
+                    const geometry = data.routes[0].geometry.coordinates; // [lng, lat]
+                    const latlngs = geometry.map(p => [p[1], p[0]]);
+                    routeLine = L.polyline(latlngs, {color: '#46bf00', weight: 4}).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), {padding: [30, 30]});
+                    const flatCoords = geometry.map(p => `${p[0]},${p[1]}`).join(';');
+                    document.getElementById('coords-input').value = flatCoords;
+                } else {
+                    routeLine = L.polyline([[lat1, lon1], [lat2, lon2]], {color: '#46bf00', weight: 4}).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), {padding: [30, 30]});
+                    document.getElementById('coords-input').value = `${lon1},${lat1};${lon2},${lat2}`;
+                }
+            })
+            .catch(() => {
+                routeLine = L.polyline([[lat1, lon1], [lat2, lon2]], {color: '#46bf00', weight: 4}).addTo(map);
+                map.fitBounds(routeLine.getBounds(), {padding: [30, 30]});
+                document.getElementById('coords-input').value = `${lon1},${lat1};${lon2},${lat2}`;
+            });
+      }
+    }
+    stationsInput.value = stationCodes.join(',');
+}
+function openEditRoad(id, name, code, type) {
+    document.getElementById('editForm').action = `/roads/${id}`;
+    document.getElementById('edit-name-input').value = name;
+    document.getElementById('edit-type-select').value = type;
+    document.getElementById('view-name').textContent = name;
+    document.getElementById('view-code').textContent = code;
+    document.getElementById('view-type').textContent = type;
+    syncEditFields();
+    document.getElementById('editModal').classList.remove('hidden');
+}
+function syncEditFields() {
+    document.getElementById('edit-name').value = document.getElementById('edit-name-input').value;
+    document.getElementById('edit-routeCode').value = document.getElementById('view-code').textContent;
+    document.getElementById('edit-typeRoad').value = document.getElementById('edit-type-select').value;
+}
+</script>
+{% endblock %}

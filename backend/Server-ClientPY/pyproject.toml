@@ -1,0 +1,24 @@
+[project]
+name = "server-client-py"
+version = "1.0.0"
+description = "Microservicio de operaciones para usuarios finales - Transmetro Conecta (Python)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "motor>=3.5.0",
+    "PyJWT>=2.9.0",
+    "argon2-cffi>=23.1.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

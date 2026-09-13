@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6 py-4 md:py-6 px-3 md:px-4">
+    <!-- Header -->
+    <div>
+        <h1 class="text-2xl md:text-3xl font-black text-[#1801a9]">
+            Buscador de Rutas Interactivo
+        </h1>
+        <p class="text-xs md:text-sm text-gray-500 mt-1">
+            Escribe a dónde vas o elige en el mapa. Nuestro algoritmo conectará las estaciones reales que existen en la ciudad y calculará tu mejor opción.
+        </p>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Left Column: Form & Map -->
+        <div class="flex-1 bg-white rounded-2xl shadow-[0_4px_20px_0_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col overflow-hidden relative">
+            <div class="p-4 md:p-6 bg-white z-10 shadow-sm relative">
+                <div class="space-y-3">
+                    <div class="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-[#46bf00]/50 overflow-hidden">
+                        <span class="pl-3 text-[#46bf00]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></svg>
+                        </span>
+                        <input id="originQuery" type="text" placeholder="Ingresa tu Origen..." class="w-full bg-transparent border-none py-2.5 px-3 text-sm focus:outline-none" onkeydown="if(event.key==='Enter') geocode('ORIGIN')">
+                        <button onclick="handleGetCurrentLocation()" class="px-3 py-2.5 bg-[#46bf00]/20 hover:bg-[#46bf00]/40 text-[#46bf00] transition-colors border-l border-gray-200" title="Usar mi ubicación actual">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </button>
+                    </div>
+                    <div class="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-[#1801a9]/50 overflow-hidden">
+                        <span class="pl-3 text-red-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd" /></svg>
+                        </span>
+                        <input id="destQuery" type="text" placeholder="Ingresa tu Destino..." class="w-full bg-transparent border-none py-2.5 px-3 text-sm focus:outline-none" onkeydown="if(event.key==='Enter') geocode('DESTINATION')">
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-4 py-2 bg-white flex flex-wrap gap-2 border-b border-gray-100 z-10">
+                <button id="btn-mode-orig" onclick="setClickMode('ORIGIN')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors bg-[#46bf00] text-white">1. Fijar en Mapa (Origen)</button>
+                <button id="btn-mode-dest" onclick="setClickMode('DESTINATION')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-500 hover:bg-gray-100">2. Fijar en Mapa (Destino)</button>
+            </div>
+
+            <!-- Leaflet Map -->
+            <div id="map" class="w-full bg-gray-100 relative z-0 h-[400px] lg:h-[550px] shrink-0"></div>
+
+            <!-- Form Actions (Bottom) -->
+            <div class="p-4 md:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 flex flex-col items-center gap-4">
+                <div class="w-full text-[11px] md:text-sm font-medium text-center text-gray-500">
+                    Basado en las rutas disponibles y tus puntos origen/destino, encontraremos la ruta óptima.
+                </div>
+                <button onclick="calculateSmartRoute()" id="btn-calc" class="w-full md:w-2/3 bg-[#1801a9] hover:bg-[#002b54] text-white font-black py-3.5 px-8 rounded-xl shadow-lg transition-all text-sm md:text-base flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    Armar mi Ruta
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column: Results & History -->
+        <div class="w-full lg:w-80 flex flex-col gap-6">
+            <!-- Result Card -->
+            <div id="result-card" class="bg-gradient-to-br from-[#46bf00]/40 to-white border border-[#46bf00]/30 rounded-2xl p-5 shadow-md hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-black text-[#1801a9] uppercase">Ruta Sugerida</span>
+                    <span id="res-sys" class="px-2.5 py-1 text-[10px] font-black rounded-full bg-[#46bf00] text-white shadow-sm">-</span>
+                </div>
+                <div class="space-y-4 mb-4">
+                    <div class="flex justify-between items-end border-b border-gray-200 pb-2">
+                        <span class="text-xs text-gray-500 font-bold uppercase">Distancia Total</span>
+                        <span id="res-dist" class="text-lg font-black text-gray-900">-</span>
+                    </div>
+                    <div class="flex justify-between items-end border-b border-gray-200 pb-2">
+                        <span class="text-xs text-gray-500 font-bold uppercase">Tiempo Est.</span>
+                        <span id="res-time" class="text-lg font-black text-[#1801a9]">-</span>
+                    </div>
+                    <div class="flex justify-between items-end pb-1">
+                        <span class="text-xs text-gray-500 font-bold uppercase">Tarifa Sugerida</span>
+                        <span id="res-fare" class="text-2xl font-black text-[#46bf00]">-</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase block mb-1">Itinerario:</span>
+                    <p id="res-itin" class="text-xs text-gray-700 bg-white/60 p-3 rounded-lg border border-gray-100 whitespace-pre-wrap leading-relaxed shadow-inner"></p>
+                </div>
+
+                <form method="post" action="/planner/pay">
+                    <input type="hidden" name="originLat" id="pay-origin-lat">
+                    <input type="hidden" name="originLon" id="pay-origin-lon">
+                    <input type="hidden" name="destLat" id="pay-dest-lat">
+                    <input type="hidden" name="destLon" id="pay-dest-lon">
+                    <input type="hidden" name="systemType" id="pay-system-type">
+                    <input type="hidden" name="itinerary" id="pay-itinerary">
+                    <input type="hidden" name="originName" id="pay-origin-name">
+                    <input type="hidden" name="destName" id="pay-dest-name">
+                    <input type="hidden" name="estimatedTime" id="pay-estimated-time">
+                    <input type="hidden" name="distanceMeters" id="pay-distance-meters">
+                    <button type="submit" class="w-full bg-[#1801a9] hover:opacity-90 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        Pagar Viaje Ahora
+                    </button>
+                </form>
+            </div>
+
+            <!-- History -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col lg:flex-1 lg:min-h-0 shrink-0">
+                <div class="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1801a9]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <h3 class="font-bold text-[#1801a9] text-sm">Historial de Viajes</h3>
+                </div>
+                {% if not history %}
+                <div class="p-6 text-center text-xs text-gray-400">Sin viajes recientes.</div>
+                {% else %}
+                <div class="p-4 space-y-3 overflow-y-auto max-h-[300px] lg:max-h-none lg:flex-1">
+                    {% for tour in history[:5] %}
+                    <div class="bg-gray-50/50 hover:bg-gray-50 rounded-xl p-3 border border-gray-100 transition-colors flex flex-col gap-2 shrink-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-black text-[10px] text-[#1801a9] bg-blue-100 px-2 py-0.5 rounded">{{ tour.get('systemType', 'TRANSMETRO') }}</span>
+                            <span class="font-bold text-[#46bf00] bg-green-100 px-2 py-0.5 rounded text-[10px]">Q{{ "%.2f"|format(tour.get('chargedFare', 0)) }}</span>
+                        </div>
+                        <div class="text-[10px] text-gray-700">
+                            <strong class="text-[#1801a9]">De:</strong> {{ tour.get('originName', 'Desconocido') }}<br/>
+                            <strong class="text-red-500">A:</strong> {{ tour.get('destName', 'Desconocido') }}
+                        </div>
+                        {% if tour.get('itinerary') %}
+                        <div class="text-[9px] text-gray-500 bg-white p-2 rounded whitespace-pre-line border-l-2 border-[#46bf00] shadow-sm">{{ tour.itinerary }}</div>
+                        {% endif %}
+                        <div class="flex items-center justify-between text-[9px] text-gray-400 mt-1">
+                            <span>{{ "%.1f"|format(tour.get('distanceMeters', 0)/1000) }} km - {{ tour.get('estimatedTimeMinutes', 0) }} min</span>
+                            <span class="font-mono">{{ tour.get('createdAt', '')[:10] }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const stations = {{ stations|tojson|safe }};
+const roads = {{ roads|tojson|safe }};
+const map = L.map('map').setView([14.62, -90.52], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+let clickMode = "ORIGIN";
+let origin = {lat: null, lng: null, text: ""};
+let dest = {lat: null, lng: null, text: ""};
+let originMarker = null;
+let destMarker = null;
+let routeLayers = [];
+
+const stationIcon = L.icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+    iconSize: [20, 32], iconAnchor: [10, 32], popupAnchor: [1, -24], shadowSize: [32, 32]
+});
+const originIcon = L.icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+});
+const destIcon = L.icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+});
+
+// Render roads
+roads.forEach(road => {
+    if(!road.path || !road.path.coordinates) return;
+    const positions = road.path.coordinates.map(p => [p[1], p[0]]);
+    const color = road.color || (road.typeRoad === 'EXPRESS' ? '#f59e0b' : road.typeRoad === 'RELEVOS' ? '#3b82f6' : '#10b981');
+    L.polyline(positions, {color: color, weight: 4, opacity: 0.7}).addTo(map).bindTooltip(`Ruta: ${road.name} (${road.typeRoad})`);
+});
+
+// Render stations
+stations.forEach(st => {
+    if(!st.location || !st.location.coordinates) return;
+    const lat = st.location.coordinates[1];
+    const lng = st.location.coordinates[0];
+    const m = L.marker([lat, lng], {icon: stationIcon}).addTo(map).bindTooltip(st.name);
+    m.on('click', () => handleStationClick(lat, lng, st.name));
+});
+
+function setClickMode(mode) {
+    clickMode = mode;
+    document.getElementById('btn-mode-orig').className = `px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${mode==='ORIGIN'?'bg-[#46bf00] text-white':'text-gray-500 hover:bg-gray-100'}`;
+    document.getElementById('btn-mode-dest').className = `px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${mode==='DESTINATION'?'bg-red-500 text-white':'text-gray-500 hover:bg-gray-100'}`;
+}
+
+map.on('click', (e) => {
+    const {lat, lng} = e.latlng;
+    if(clickMode === "ORIGIN") {
+        setOrigin(lat, lng, "Ubicación fijada en mapa");
+        setClickMode("DESTINATION");
+        if(typeof Toastify !== 'undefined') Toastify({text: "Origen seleccionado.", duration:2000, style:{background:"#46bf00"}}).showToast();
+    } else {
+        setDest(lat, lng, "Ubicación fijada en mapa");
+        setClickMode("ORIGIN");
+        if(typeof Toastify !== 'undefined') Toastify({text: "Destino seleccionado.", duration:2000, style:{background:"#46bf00"}}).showToast();
+    }
+});
+
+function handleStationClick(lat, lng, name) {
+    if(clickMode === "ORIGIN") {
+        setOrigin(lat, lng, `Estación: ${name}`);
+        setClickMode("DESTINATION");
+        if(typeof Toastify !== 'undefined') Toastify({text: `Origen: ${name}`, duration:2000, style:{background:"#46bf00"}}).showToast();
+    } else {
+        setDest(lat, lng, `Estación: ${name}`);
+        setClickMode("ORIGIN");
+        if(typeof Toastify !== 'undefined') Toastify({text: `Destino: ${name}`, duration:2000, style:{background:"#46bf00"}}).showToast();
+    }
+}
+
+function setOrigin(lat, lng, text) {
+    origin = {lat, lng, text};
+    document.getElementById('originQuery').value = text;
+    if(originMarker) map.removeLayer(originMarker);
+    originMarker = L.marker([lat, lng], {icon: originIcon}).addTo(map).bindTooltip("Origen", {permanent:true, direction:"top"});
+}
+
+function setDest(lat, lng, text) {
+    dest = {lat, lng, text};
+    document.getElementById('destQuery').value = text;
+    if(destMarker) map.removeLayer(destMarker);
+    destMarker = L.marker([lat, lng], {icon: destIcon}).addTo(map).bindTooltip("Destino", {permanent:true, direction:"top"});
+}
+
+async function geocode(type) {
+    const query = document.getElementById(type === 'ORIGIN' ? 'originQuery' : 'destQuery').value;
+    if(!query) return;
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=gt&format=json&limit=1`);
+        const data = await res.json();
+        if(data && data.length > 0) {
+            const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+            if(type === 'ORIGIN') setOrigin(lat, lng, data[0].display_name);
+            else setDest(lat, lng, data[0].display_name);
+            map.flyTo([lat, lng], 15);
+        } else {
+            alert('Ubicación no encontrada');
+        }
+    } catch(e) {}
+}
+
+function handleGetCurrentLocation() {
+    if (!navigator.geolocation) return alert("Geolocalización no soportada");
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const {latitude, longitude} = pos.coords;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`);
+            const data = await res.json();
+            setOrigin(latitude, longitude, data.display_name || "Mi Ubicación Actual");
+            map.flyTo([latitude, longitude], 15);
+        } catch(e) {
+            setOrigin(latitude, longitude, "Mi Ubicación Actual");
+        }
+    });
+}
+
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const p1 = lat1 * Math.PI/180;
+    const p2 = lat2 * Math.PI/180;
+    const dp = (lat2-lat1) * Math.PI/180;
+    const dl = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function getWalkingDirections(lon1, lat1, lon2, lat2) {
+    try {
+        const res = await fetch(`https://router.project-osrm.org/route/v1/foot/${lon1},${lat1};${lon2},${lat2}?steps=true&geometries=geojson`);
+        const data = await res.json();
+        if(data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            return {
+                text: `Camina ${Math.round(route.distance)}m`,
+                duration: route.duration,
+                distance: route.distance,
+                coordinates: route.geometry.coordinates.map(p => [p[1], p[0]])
+            };
+        }
+    } catch(e){}
+    const fb = getDistance(lat1, lon1, lat2, lon2);
+    return { text: `Camina ${Math.round(fb)}m`, duration: fb/1.4, distance: fb, coordinates: [[lat1, lon1], [lat2, lon2]] };
+}
+
+async function getDrivingDirections(lon1, lat1, lon2, lat2) {
+    try {
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?geometries=geojson`);
+        const data = await res.json();
+        if(data.routes && data.routes.length > 0) {
+            return {
+                distance: data.routes[0].distance,
+                duration: data.routes[0].duration,
+                coordinates: data.routes[0].geometry.coordinates.map(p => [p[1], p[0]])
+            };
+        }
+    } catch(e){}
+    const fb = getDistance(lat1, lon1, lat2, lon2);
+    return { distance: fb, duration: fb/4.16, coordinates: [[lat1, lon1], [lat2, lon2]] };
+}
+
+async function calculateSmartRoute() {
+    if(!origin.lat || !dest.lat) return alert("Selecciona origen y destino");
+    const btn = document.getElementById('btn-calc');
+    btn.innerHTML = 'Procesando algoritmo...';
+    btn.disabled = true;
+
+    let nearestOrigStation = null, minOrigDist = Infinity;
+    stations.forEach(st => {
+        const dist = getDistance(origin.lat, origin.lng, st.location.coordinates[1], st.location.coordinates[0]);
+        if(dist < minOrigDist) { minOrigDist = dist; nearestOrigStation = st; }
+    });
+
+    let nearestDestStation = null, minDestDist = Infinity;
+    stations.forEach(st => {
+        const dist = getDistance(dest.lat, dest.lng, st.location.coordinates[1], st.location.coordinates[0]);
+        if(dist < minDestDist) { minDestDist = dist; nearestDestStation = st; }
+    });
+
+    if(!nearestOrigStation || !nearestDestStation) {
+        alert("No hay estaciones disponibles");
+        btn.innerHTML = '🚀 Armar mi Ruta'; btn.disabled = false;
+        return;
+    }
+
+    let bestRoad = null;
+    for(const road of roads) {
+        const hasOrig = road.stations.some(s => s === nearestOrigStation._id || s._id === nearestOrigStation._id);
+        const hasDest = road.stations.some(s => s === nearestDestStation._id || s._id === nearestDestStation._id);
+        if(hasOrig && hasDest) { bestRoad = road; break; }
+    }
+
+    const walkToOrigData = await getWalkingDirections(origin.lng, origin.lat, nearestOrigStation.location.coordinates[0], nearestOrigStation.location.coordinates[1]);
+    const walkToDestData = await getWalkingDirections(nearestDestStation.location.coordinates[0], nearestDestStation.location.coordinates[1], dest.lng, dest.lat);
+    const busData = await getDrivingDirections(nearestOrigStation.location.coordinates[0], nearestOrigStation.location.coordinates[1], nearestDestStation.location.coordinates[0], nearestDestStation.location.coordinates[1]);
+
+    const totalDuration = walkToOrigData.duration + busData.duration + walkToDestData.duration + 300;
+    const estTime = Math.ceil(totalDuration/60);
+    const totalDist = walkToOrigData.distance + busData.distance + walkToDestData.distance;
+    
+    let systemType = "TRANSMETRO";
+    let itinerary = "";
+    if(bestRoad) {
+        if(bestRoad.typeRoad === "EXPRESS") systemType = "TRANSURBANO";
+        if(bestRoad.typeRoad === "RELEVOS") systemType = "TUBUS";
+        itinerary = `1. ${walkToOrigData.text} hacia Estación ${nearestOrigStation.name}.\n2. Aborda Ruta ${bestRoad.name}.\n3. Baja en Estación ${nearestDestStation.name}.\n4. ${walkToDestData.text} hacia tu destino.`;
+    } else {
+        itinerary = `1. ${walkToOrigData.text} hacia Estación ${nearestOrigStation.name}.\n2. Toma ruta con transbordo hacia troncales.\n3. Baja en Estación ${nearestDestStation.name}.\n4. ${walkToDestData.text} hacia tu destino.`;
+    }
+
+    const directDist = getDistance(origin.lat, origin.lng, dest.lat, dest.lng);
+    const fare = systemType === "TRANSURBANO" ? 2.00 : 1.00;
+
+    document.getElementById('res-sys').textContent = systemType;
+    document.getElementById('res-itin').textContent = itinerary;
+    document.getElementById('res-time').textContent = `${estTime} min`;
+    document.getElementById('res-dist').textContent = `${(directDist/1000).toFixed(2)} km`;
+    document.getElementById('res-fare').textContent = `Q${fare.toFixed(2)}`;
+
+    document.getElementById('pay-origin-lat').value = origin.lat;
+    document.getElementById('pay-origin-lon').value = origin.lng;
+    document.getElementById('pay-dest-lat').value = dest.lat;
+    document.getElementById('pay-dest-lon').value = dest.lng;
+    document.getElementById('pay-system-type').value = systemType;
+    document.getElementById('pay-itinerary').value = itinerary;
+    document.getElementById('pay-origin-name').value = origin.text;
+    document.getElementById('pay-dest-name').value = dest.text;
+    document.getElementById('pay-estimated-time').value = estTime;
+    document.getElementById('pay-distance-meters').value = Math.round(totalDist);
+
+    document.getElementById('result-card').classList.remove('hidden');
+    
+    routeLayers.forEach(l => map.removeLayer(l));
+    routeLayers = [];
+    routeLayers.push(L.polyline(walkToOrigData.coordinates, {color:"gray", dashArray:"5, 10", weight:4, opacity:0.8}).addTo(map));
+    routeLayers.push(L.polyline(busData.coordinates, {color:"red", weight:6, opacity:0.9}).addTo(map).bindTooltip("Ruta Activa", {permanent:true}));
+    routeLayers.push(L.polyline(walkToDestData.coordinates, {color:"gray", dashArray:"5, 10", weight:4, opacity:0.8}).addTo(map));
+    
+    map.flyTo([origin.lat, origin.lng], 15);
+    
+    btn.innerHTML = '🚀 Armar mi Ruta'; btn.disabled = false;
+}
+</script>
+{% endblock %}

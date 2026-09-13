@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+{% set totalSpent = 0 %}
+{% set totalDistance = 0 %}
+{% for t in tours %}
+    {% set totalSpent = totalSpent + t.get('chargedFare', 0) %}
+    {% set totalDistance = totalDistance + (t.get('distanceMeters', 0) / 1000) %}
+{% endfor %}
+
+<div class="max-w-5xl mx-auto space-y-6 py-8 px-4">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-[#1801a9] to-[#002b54] rounded-3xl p-8 text-white flex flex-col md:flex-row items-center gap-6 shadow-xl relative overflow-hidden">
+        <div class="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-[#46bf00]/20 rounded-full blur-3xl"></div>
+        <div class="w-24 h-24 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/20 shadow-inner z-10 text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+        </div>
+        <div class="text-center md:text-left z-10">
+            <h1 class="text-3xl font-black mb-1">Mi Perfil Ciudadano</h1>
+            <p class="text-blue-100 opacity-90 font-medium">CUI: {{ user.cui }}</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200">
+        <button onclick="switchTab('resumen')" id="tab-resumen" class="flex-1 md:flex-none py-4 px-6 font-bold text-sm transition-all flex items-center justify-center gap-2 border-b-2 border-[#46bf00] text-[#46bf00]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> Resumen de Actividad
+        </button>
+        <button onclick="switchTab('usuario')" id="tab-usuario" class="flex-1 md:flex-none py-4 px-6 font-bold text-sm transition-all flex items-center justify-center gap-2 border-b-2 border-transparent text-gray-500 hover:text-[#1801a9]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> Datos del Usuario
+        </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="bg-white rounded-2xl p-6 shadow-[0_4px_20px_0_rgba(0,0,0,0.05)] border border-gray-100">
+        
+        <!-- RESUMEN TAB -->
+        <div id="content-resumen" class="space-y-8 animate-in fade-in duration-300 block">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 rounded-xl p-6 border border-gray-100 flex items-center gap-4">
+                    <div class="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Gastado</p>
+                        <h3 class="text-3xl font-black text-gray-900">Q{{ "%.2f"|format(totalSpent) }}</h3>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-6 border border-gray-100 flex items-center gap-4">
+                    <div class="w-14 h-14 bg-blue-100 text-[#1801a9] rounded-2xl flex items-center justify-center shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Distancia Recorrida</p>
+                        <h3 class="text-3xl font-black text-gray-900">{{ "%.1f"|format(totalDistance) }} km</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="space-y-4">
+                    <h3 class="text-lg font-bold text-[#1801a9] border-b pb-2">Gastos por Día (Q)</h3>
+                    <div class="h-64 w-full">
+                        <canvas id="gastosChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <h3 class="text-lg font-bold text-[#1801a9] border-b pb-2">Distancia por Día (km)</h3>
+                    <div class="h-64 w-full">
+                        <canvas id="distanciaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USUARIO TAB -->
+        <div id="content-usuario" class="space-y-6 animate-in fade-in duration-300 hidden">
+            <h2 class="text-xl font-bold text-[#1801a9] mb-4">Información de Cuenta</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 flex items-start gap-4">
+                    <div class="p-3 bg-white rounded-lg shadow-sm text-[#1801a9]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">CUI / DPI</p>
+                        <p class="font-mono font-bold text-lg text-gray-900">{{ user.cui }}</p>
+                        <p class="text-xs text-gray-500 mt-1">Identificador único</p>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 flex items-start gap-4">
+                    <div class="p-3 bg-white rounded-lg shadow-sm text-[#1801a9]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Correo Electrónico</p>
+                        <div id="email-display" class="flex items-center gap-2">
+                            <p class="font-bold text-lg text-gray-900 truncate">{{ email }}</p>
+                            <button onclick="toggleEmailEdit(true)" class="p-1.5 text-[#1801a9] hover:bg-blue-50 rounded-lg transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                        </div>
+                        <div id="email-edit" class="hidden space-y-2">
+                            <form method="post" action="/profile/update-email" class="flex flex-col gap-2">
+                                <input type="email" name="newEmail" value="{{ email }}" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1801a9]">
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex items-center gap-1 px-3 py-1.5 bg-[#46bf00] text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors">Guardar</button>
+                                    <button type="button" onclick="toggleEmailEdit(false)" class="flex items-center gap-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Dirección de contacto</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 flex items-start gap-4">
+                    <div class="p-3 bg-white rounded-lg shadow-sm text-[#1801a9]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Miembro Desde</p>
+                        <p class="font-bold text-lg text-gray-900">2026</p>
+                        <p class="text-xs text-gray-500 mt-1">Fecha de registro</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 p-6 bg-blue-50 border border-blue-100 rounded-xl">
+                <h4 class="font-bold text-[#1801a9] mb-2">Privacidad y Seguridad</h4>
+                <p class="text-sm text-gray-600">
+                    Tus datos están encriptados en los servidores de la municipalidad. El sistema T-Conecta utiliza autenticación avanzada JWT y algoritmos seguros para proteger tu identidad y las transacciones de tu billetera ciudadana.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function switchTab(tab) {
+    if (tab === 'resumen') {
+        document.getElementById('content-resumen').classList.remove('hidden');
+        document.getElementById('content-usuario').classList.add('hidden');
+        document.getElementById('tab-resumen').className = "flex-1 md:flex-none py-4 px-6 font-bold text-sm transition-all flex items-center justify-center gap-2 border-b-2 border-[#46bf00] text-[#46bf00]";
+        document.getElementById('tab-usuario').className = "flex-1 md:flex-none py-4 px-6 font-bold text-sm transition-all flex items-center justify-center gap-2 border-b-2 border-transparent text-gray-500 hover:text-[#1801a9]";
+    } else {
+        document.getElementById('content-resumen').classList.add('hidden');
+        document.getElementById('content-usuario').classList.remove('hidden');
+        document.getElementById('tab-usuario').className = "flex-1 md:flex-none py-4 px-6 font-bold text-sm transition-all flex items-center justify-center gap-2 border-b-2 border-[#1801a9] text-[#1801a9]";
+        document.getElementById('tab-resumen').className = "flex-1 md:flex-none py-4 px-6 font-bold text-sm transition-all flex items-center justify-center gap-2 border-b-2 border-transparent text-gray-500 hover:text-[#1801a9]";
+    }
+}
+
+function toggleEmailEdit(show) {
+    if (show) {
+        document.getElementById('email-display').classList.add('hidden');
+        document.getElementById('email-edit').classList.remove('hidden');
+    } else {
+        document.getElementById('email-display').classList.remove('hidden');
+        document.getElementById('email-edit').classList.add('hidden');
+    }
+}
+
+// Prepare chart data
+const toursData = {{ tours|tojson|safe }};
+const chartDataMap = {};
+toursData.forEach(t => {
+    let rawDate = t.createdAt || '';
+    let dateObj = new Date(rawDate);
+    let dateStr = isNaN(dateObj) ? 'Sin fecha' : dateObj.toLocaleDateString("es-GT", { day: '2-digit', month: 'short' });
+    if (!chartDataMap[dateStr]) chartDataMap[dateStr] = {gastado: 0, recorrido: 0};
+    chartDataMap[dateStr].gastado += (t.chargedFare || 0);
+    chartDataMap[dateStr].recorrido += ((t.distanceMeters || 0) / 1000);
+});
+
+const labels = Object.keys(chartDataMap).reverse();
+const gastos = labels.map(l => chartDataMap[l].gastado);
+const distancias = labels.map(l => chartDataMap[l].recorrido);
+
+if(labels.length > 0 && document.getElementById('gastosChart')) {
+    new Chart(document.getElementById('gastosChart'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Gastado (Q)', data: gastos, backgroundColor: '#3da300', borderRadius: 4 }] },
+        options: { maintainAspectRatio: false, scales: { x: { grid: {display: false} }, y: { border: {display: false} } } }
+    });
+}
+
+if(labels.length > 0 && document.getElementById('distanciaChart')) {
+    new Chart(document.getElementById('distanciaChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Distancia (km)', data: distancias, borderColor: '#1801a9', tension: 0.4, borderWidth: 3, pointRadius: 4 }] },
+        options: { maintainAspectRatio: false, scales: { x: { grid: {display: false} }, y: { border: {display: false} } } }
+    });
+}
+</script>
+{% endblock %}

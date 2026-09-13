@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Conecta Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.15s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out; min-width: 280px; }
+        .toast-error { background: #dc2626; }
+        .toast-success { background: #16a34a; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    <div id="toast-container"></div>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-[#1801a9] text-white flex items-center justify-between p-4 sticky top-0 z-40 shadow-sm">
+        <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg">T-Conecta Admin</h1>
+        </div>
+        <button id="admin-menu-btn" class="p-1 focus:outline-none hover:text-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div id="admin-sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+
+    <div class="flex min-h-screen relative">
+        <!-- Sidebar -->
+        <aside id="admin-sidebar" class="w-64 bg-[#1801a9] text-white flex flex-col fixed md:sticky top-0 h-screen z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out shrink-0">
+            <div class="p-4 border-b border-white/20 flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold">T-Conecta</h1>
+                    <p class="text-xs text-blue-200">Panel Administrativo</p>
+                </div>
+                <button id="admin-close-btn" class="md:hidden p-1 hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <a href="/dashboard" class="block px-3 py-2 rounded hover:bg-white/10 {% if request.url.path.startswith('/dashboard') %}bg-white/20{% endif %}">Dashboard</a>
+                <a href="/roads" class="block px-3 py-2 rounded hover:bg-white/10 {% if request.url.path.startswith('/roads') %}bg-white/20{% endif %}">Rutas</a>
+                <a href="/stations" class="block px-3 py-2 rounded hover:bg-white/10 {% if request.url.path.startswith('/stations') %}bg-white/20{% endif %}">Estaciones</a>
+                <a href="/buses" class="block px-3 py-2 rounded hover:bg-white/10 {% if request.url.path.startswith('/buses') %}bg-white/20{% endif %}">Buses</a>
+                <a href="/alerts" class="block px-3 py-2 rounded hover:bg-white/10 {% if request.url.path.startswith('/alerts') %}bg-white/20{% endif %}">Alertas</a>
+                {% if user.role == "Admin" %}
+                <a href="/users" class="block px-3 py-2 rounded hover:bg-white/10 {% if request.url.path.startswith('/users') %}bg-white/20{% endif %}">Usuarios</a>
+                {% endif %}
+            </nav>
+            <div class="p-4 border-t border-white/20 shrink-0">
+                <p class="text-xs text-blue-200">{{ user.cui }}</p>
+                <p class="text-xs text-blue-300">{{ user.role }}</p>
+                <form method="post" action="/auth/logout" class="mt-2">
+                    <button class="w-full text-left px-3 py-2 rounded hover:bg-red-500/50 text-sm">Cerrar sesion</button>
+                </form>
+            </div>
+        </aside>
+        
+        <!-- Main -->
+        <main class="flex-1 p-4 md:p-6 w-full max-w-full min-h-screen">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>
+        const btnOpen = document.getElementById('admin-menu-btn');
+        const btnClose = document.getElementById('admin-close-btn');
+        const overlay = document.getElementById('admin-sidebar-overlay');
+        const sidebar = document.getElementById('admin-sidebar');
+        
+        function toggleSidebar() {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if(isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+        
+        btnOpen?.addEventListener('click', toggleSidebar);
+        btnClose?.addEventListener('click', toggleSidebar);
+        overlay?.addEventListener('click', toggleSidebar);
+    </script>
+    <script>
+    (function() {
+        const params = new URLSearchParams(window.location.search);
+        const err = params.get('error');
+        const ok = params.get('success');
+        const container = document.getElementById('toast-container');
+        window.showToast = function(msg, type) {
+            const t = document.createElement('div');
+            t.className = 'toast toast-' + type;
+            t.textContent = msg;
+            container.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 4000);
+        };
+        
+        function show(msg, type) {
+            window.showToast(msg, type);
+            const url = new URL(window.location);
+            url.searchParams.delete('error');
+            url.searchParams.delete('success');
+            window.history.replaceState({}, '', url);
+        }
+        if (err) show(err, 'error');
+        if (ok) show(ok, 'success');
+    })();
+    </script>
+</body>
+</html>

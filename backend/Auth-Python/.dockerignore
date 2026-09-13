@@ -1,0 +1,44 @@
+# ── Dependencias ──────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# ── Variables de entorno (nunca al contenedor) ─
+.env
+.env.local
+.env.*.local
+
+# ── Git ───────────────────────────────────────
+.git/
+.gitignore
+
+# ── Editor / OS ───────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────
+logs/
+*.log
+
+# ── Tests / Dev ───────────────────────────────
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+htmlcov/
+.coverage
+
+# ── Documentación ─────────────────────────────
+*.md
+LICENSE
+
+# ── Docker ────────────────────────────────────
+Dockerfile
+docker-compose.yml
+.dockerignore

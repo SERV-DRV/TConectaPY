@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Conecta Admin - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+        <h1 class="text-2xl font-bold text-[#1801a9] mb-2">T-Conecta Admin</h1>
+        <p class="text-gray-500 mb-6">Panel de administracion</p>
+        {% if error %}
+        <div class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm font-medium">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/auth/login" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">CUI / DPI</label>
+                <input type="text" name="cui" required pattern="\d{13}" maxlength="13"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9] focus:border-transparent"
+                       placeholder="Ej: 0000000000000">
+                <p class="text-xs text-gray-400 mt-1">13 digitos, sin espacios ni guiones</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contrasena</label>
+                <input type="password" name="password" required
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1801a9] focus:border-transparent">
+            </div>
+            <button type="submit" class="w-full bg-[#1801a9] text-white py-2 rounded-lg hover:bg-[#15018a] transition">
+                Iniciar sesion
+            </button>
+        </form>
+        <p class="text-xs text-gray-400 mt-4 text-center">Usuarios semilla: CUI 0000000000000 / AdminTransmetro2026!</p>
+    </div>
+</body>
+</html>

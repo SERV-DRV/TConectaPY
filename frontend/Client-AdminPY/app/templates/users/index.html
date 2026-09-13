@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Usuarios Admin</h1>
+    <button onclick="document.getElementById('modal').classList.remove('hidden')" class="bg-[#46bf00] text-white px-4 py-2 rounded-lg hover:bg-[#3da000]">+ Nuevo Admin</button>
+</div>
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="w-full min-w-[800px]">
+        <thead class="bg-gray-100"><tr>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">CUI</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Email</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Rol</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Estado</th>
+        </tr></thead>
+        <tbody>
+        {% for u in users %}
+        <tr class="border-t hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm">{{ u.cui or u.Cui or "-" }}</td>
+            <td class="px-4 py-3 text-sm">{{ u.email or u.Email or "-" }}</td>
+            <td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded text-xs bg-purple-100 text-purple-700">{{ u.role or u.Role or "Admin" }}</span></td>
+            <td class="px-4 py-3 text-sm text-green-600">Activo</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Nuevo Administrador</h2>
+            <button onclick="document.getElementById('modal').classList.add('hidden')" class="text-gray-500">&times;</button>
+        </div>
+        <form method="post" action="/users" class="space-y-4">
+            <input name="cui" id="cui-input" placeholder="CUI (13 digitos)" required pattern="\d{13}" class="w-full border rounded-lg px-3 py-2">
+            <input name="email" id="email-input" type="email" placeholder="Email" required class="w-full border rounded-lg px-3 py-2">
+            <input name="password" type="text" value="Transmetro2024!" readonly class="w-full border rounded-lg px-3 py-2 bg-gray-50 font-mono">
+            <p class="text-xs text-gray-500">Contrasena default: <strong>Transmetro2024!</strong></p>
+            <button type="submit" class="w-full bg-[#46bf00] text-white py-2 rounded-lg hover:bg-[#3da000]">Crear Admin</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

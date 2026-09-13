@@ -1,0 +1,191 @@
+# =============================================================
+#  TransmetroConecta — Docker Compose para Auth-Python
+#
+#  Todos los servicios backend son Python (TConectaPY).
+# =============================================================
+
+services:
+
+  # ============================================================
+  # BASES DE DATOS
+  # ============================================================
+
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: transmetro_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: TransmetroAuthDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mongo-db:
+    image: mongo:6.0
+    container_name: transmetro_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================
+  # MICROSERVICIO DE AUTENTICACIÓN — Python/FastAPI
+  # Incluye operaciones wallet directas (sin dependencia S2S)
+  # ============================================================
+
+  auth-python:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: transmetro-auth-python:latest
+    container_name: transmetro_auth_python
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres-db:5432/TransmetroAuthDb
+      - MONGODB_URI=mongodb://mongo-db:27017/TransmetroUserDb
+      - JWT_SECRET=A_SUPER_SECRET_KEY_FOR_TRANSMETRO_CONECTA_12345
+      - JWT_ISSUER=TransmetroAuthServer
+      - JWT_AUDIENCE=TransmetroUsers
+      - JWT_EXPIRES_IN=120
+      - JWT_RESET_EXPIRES_IN=15
+      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      mongo-db:
+        condition: service_healthy
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ============================================================
+  # MICROSERVICIOS BACKEND — Python/FastAPI
+  # ============================================================
+
+  server-admin:
+    build:
+      context: ../Server-AdminPY
+      dockerfile: Dockerfile
+    container_name: transmetro_server_admin
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongo-db:27017/TransmetroAdminDb
+      - JWT_SECRET=A_SUPER_SECRET_KEY_FOR_TRANSMETRO_CONECTA_12345
+      - AUTO_SEED=true
+    depends_on:
+      mongo-db:
+        condition: service_healthy
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+
+  server-client:
+    build:
+      context: ../Server-ClientPY
+      dockerfile: Dockerfile
+    container_name: transmetro_server_client
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - MONGODB_URI=mongodb://mongo-db:27017/TransmetroUserDb
+      - JWT_SECRET=A_SUPER_SECRET_KEY_FOR_TRANSMETRO_CONECTA_12345
+      - JWT_AUDIENCE=TransmetroUsers
+      - INTERNAL_SECRET=SuperSecretS2S_Transmetro2026
+    depends_on:
+      mongo-db:
+        condition: service_healthy
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+
+  # ============================================================
+  # CLIENTES WEB — Python/FastAPI + Jinja2 SSR
+  # ============================================================
+
+  client-admin:
+    build:
+      context: ../../frontend/Client-AdminPY
+      dockerfile: Dockerfile
+    container_name: transmetro_client_admin
+    ports:
+      - "5173:5173"
+    environment:
+      - SECRET_KEY=transmetro-session-secret-key
+      - AUTH_URL=http://auth-python:8080/api
+      - ADMIN_URL=http://server-admin:3001/TCONECTA/v1
+      - ENVIRONMENT=development
+    depends_on:
+      auth-python:
+        condition: service_healthy
+      server-admin:
+        condition: service_started
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+
+  client-user:
+    build:
+      context: ../../frontend/Client-UserPY
+      dockerfile: Dockerfile
+    container_name: transmetro_client_user
+    ports:
+      - "5174:5174"
+    environment:
+      - SECRET_KEY=transmetro-session-secret-key
+      - AUTH_URL=http://auth-python:8080/api
+      - ADMIN_URL=http://server-admin:3001/TCONECTA/v1
+      - CLIENT_URL=http://server-client:3002/TRANSMETRO-CONECTA-CLIENTE/v1
+      - ENVIRONMENT=development
+    depends_on:
+      auth-python:
+        condition: service_healthy
+      server-admin:
+        condition: service_started
+      server-client:
+        condition: service_started
+    networks:
+      - transmetro_network
+    restart: unless-stopped
+
+# ============================================================
+# VOLÚMENES Y REDES
+# ============================================================
+
+volumes:
+  pgdata:
+  mongodata:
+
+networks:
+  transmetro_network:
+    driver: bridge

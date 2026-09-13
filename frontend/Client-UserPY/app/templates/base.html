@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Conecta | Movilidad Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    {% if user %}
+    <nav class="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+            <!-- Logo & Hamburger -->
+            <div class="flex items-center gap-2">
+                <button id="mobile-menu-btn" class="md:hidden p-1 text-gray-500 hover:text-[#1801a9] focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+                <a href="/planner" class="font-black text-[#1801a9] text-lg tracking-tight">T-Conecta</a>
+            </div>
+            
+            <!-- Desktop Links -->
+            <div class="hidden md:flex items-center gap-6">
+                <a href="/planner" class="text-sm font-medium transition-colors hover:text-[#1801a9] {% if request.url.path.startswith('/planner') %}text-[#1801a9] font-bold{% endif %}">Planificador</a>
+                <a href="/wallet" class="text-sm font-medium transition-colors hover:text-[#1801a9] {% if request.url.path.startswith('/wallet') %}text-[#1801a9] font-bold{% endif %}">Billetera</a>
+                <a href="/explore" class="text-sm font-medium transition-colors hover:text-[#1801a9] {% if request.url.path.startswith('/explore') %}text-[#1801a9] font-bold{% endif %}">Explorar</a>
+                <a href="/alerts" class="text-sm font-medium transition-colors hover:text-[#1801a9] {% if request.url.path.startswith('/alerts') %}text-[#1801a9] font-bold{% endif %}">Alertas</a>
+                <a href="/profile" class="text-sm font-medium transition-colors hover:text-[#1801a9] {% if request.url.path.startswith('/profile') %}text-[#1801a9] font-bold{% endif %}">Perfil</a>
+            </div>
+
+            <!-- Right Side: Balance & Logout -->
+            <div class="flex items-center gap-3">
+                <div class="bg-green-100/40 border border-green-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm" id="global-balance-badge" style="display: none;">
+                    <span class="text-[10px] font-bold text-blue-900 hidden sm:inline uppercase">Saldo</span>
+                    <span class="text-sm font-black text-green-600" id="global-balance-amount">Q0.00</span>
+                </div>
+                <form method="post" action="/auth/logout">
+                    <button class="text-xs font-bold text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-lg transition-colors border border-gray-100 bg-gray-50 hover:bg-red-50 flex items-center gap-1">
+                        <span class="hidden sm:inline">Salir</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 px-4 pt-2 pb-4 space-y-1 shadow-lg absolute w-full">
+            <a href="/planner" class="block px-3 py-2.5 rounded-lg text-sm font-bold {% if request.url.path.startswith('/planner') %}bg-blue-50 text-[#1801a9]{% else %}text-gray-600 hover:bg-gray-50 hover:text-[#1801a9]{% endif %}">Planificador</a>
+            <a href="/wallet" class="block px-3 py-2.5 rounded-lg text-sm font-bold {% if request.url.path.startswith('/wallet') %}bg-blue-50 text-[#1801a9]{% else %}text-gray-600 hover:bg-gray-50 hover:text-[#1801a9]{% endif %}">Billetera</a>
+            <a href="/explore" class="block px-3 py-2.5 rounded-lg text-sm font-bold {% if request.url.path.startswith('/explore') %}bg-blue-50 text-[#1801a9]{% else %}text-gray-600 hover:bg-gray-50 hover:text-[#1801a9]{% endif %}">Explorar</a>
+            <a href="/alerts" class="block px-3 py-2.5 rounded-lg text-sm font-bold {% if request.url.path.startswith('/alerts') %}bg-blue-50 text-[#1801a9]{% else %}text-gray-600 hover:bg-gray-50 hover:text-[#1801a9]{% endif %}">Alertas</a>
+            <a href="/profile" class="block px-3 py-2.5 rounded-lg text-sm font-bold {% if request.url.path.startswith('/profile') %}bg-blue-50 text-[#1801a9]{% else %}text-gray-600 hover:bg-gray-50 hover:text-[#1801a9]{% endif %}">Perfil</a>
+        </div>
+    </nav>
+    <script>
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/wallet/api/balance')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.balance !== undefined) {
+                        document.getElementById('global-balance-amount').textContent = 'Q' + parseFloat(data.balance).toFixed(2);
+                        document.getElementById('global-balance-badge').style.display = 'flex';
+                    }
+                })
+                .catch(err => console.error("Error fetching balance", err));
+        });
+    </script>
+    {% endif %}
+    <main class="{% if user %}max-w-7xl mx-auto p-6{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        {% if request.state.toast_msg %}
+        Toastify({
+            text: "{{ request.state.toast_msg }}",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            style: { background: "#46bf00", color: "#fff", borderRadius: "8px" }
+        }).showToast();
+        {% endif %}
+        
+        {% if request.state.toast_error %}
+        Toastify({
+            text: "{{ request.state.toast_error }}",
+            duration: 4000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            style: { background: "#ef4444", color: "#fff", borderRadius: "8px" }
+        }).showToast();
+        {% endif %}
+    </script>
+</body>
+</html>

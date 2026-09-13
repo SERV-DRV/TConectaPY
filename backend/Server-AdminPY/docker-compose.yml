@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mongo-db:
+    image: mongo:6.0
+    container_name: mongo-db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - transmetro_network
+
+  server-admin-py:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: server-admin-py
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGODB_URI=mongodb://mongo-db:27017/TransmetroAdminDb
+      - JWT_SECRET=A_SUPER_SECRET_KEY_FOR_TRANSMETRO_CONECTA_12345
+      - AUTO_SEED=true
+    depends_on:
+      - mongo-db
+    networks:
+      - transmetro_network
+
+volumes:
+  mongodata:
+
+networks:
+  transmetro_network:
+    driver: bridge

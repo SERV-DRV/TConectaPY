@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Buses</h1>
+    <button onclick="document.getElementById('modal').classList.remove('hidden')" class="bg-[#46bf00] text-white px-4 py-2 rounded-lg hover:bg-[#3da000]">+ Nuevo Bus</button>
+</div>
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="w-full min-w-[800px]">
+        <thead class="bg-gray-100"><tr>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Numero</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Placa</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Capacidad</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Ruta Asignada</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Estado</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">Acciones</th>
+        </tr></thead>
+        <tbody>
+        {% for b in buses %}
+        <tr class="border-t hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm">{{ b.busNumber }}</td>
+            <td class="px-4 py-3 text-sm font-mono">{{ b.licensePlate }}</td>
+            <td class="px-4 py-3 text-sm">{{ b.capacity }}</td>
+            <td class="px-4 py-3 text-sm">{{ b.assignedRoadName }}</td>
+            <td class="px-4 py-3 text-sm">
+                {% if b.status == "ACTIVE" %}<span class="text-green-600">Activo</span>
+                {% elif b.status == "INACTIVE" %}<span class="text-gray-600">Inactivo</span>
+                {% elif b.status == "MAINTENANCE" %}<span class="text-yellow-600">Mantenimiento</span>
+                {% else %}<span class="text-gray-600">{{ b.status }}</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm flex gap-2 items-center">
+                <button onclick='openEditBus({{ b._id|tojson }}, {{ b.busNumber|tojson }}, {{ b.licensePlate|tojson }}, {{ b.capacity }}, {{ b.assignedRoad|tojson if b.assignedRoad else "null" }}, {{ b.assignedRoadName|tojson }})' class="text-xs text-blue-600 hover:underline">Editar</button>
+                <form method="post" action="/buses/{{ b._id }}/status" class="inline">
+                    <select name="status" onchange="this.form.submit()" class="text-xs border rounded px-2 py-1">
+                        <option value="ACTIVE" {% if b.status == "ACTIVE" %}selected{% endif %}>Activo</option>
+                        <option value="INACTIVE" {% if b.status == "INACTIVE" %}selected{% endif %}>Inactivo</option>
+                        <option value="MAINTENANCE" {% if b.status == "MAINTENANCE" %}selected{% endif %}>Mantenimiento</option>
+                    </select>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!-- Modal Crear -->
+<div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Nuevo Bus</h2>
+            <button onclick="document.getElementById('modal').classList.add('hidden')" class="text-gray-500">&times;</button>
+        </div>
+        <form method="post" action="/buses" class="space-y-4">
+            <input name="busNumber" placeholder="Numero de bus" required class="w-full border rounded-lg px-3 py-2">
+            <input name="licensePlate" placeholder="Placa (ej: U1234ABC)" required pattern="[UCP]\d{3,4}[A-Z]{3}" class="w-full border rounded-lg px-3 py-2">
+            <input name="capacity" type="number" value="80" min="10" max="200" class="w-full border rounded-lg px-3 py-2">
+            <select name="assignedRoad" class="w-full border rounded-lg px-3 py-2">
+                <option value="">Sin ruta asignada</option>
+                {% for r in roads %}
+                <option value="{{ r._id }}">{{ r.name }} ({{ r.routeCode }})</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="w-full bg-[#46bf00] text-white py-2 rounded-lg hover:bg-[#3da000]">Crear Bus</button>
+        </form>
+    </div>
+</div>
+<!-- Modal Editar -->
+<div id="editModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Editar Bus</h2>
+            <button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-gray-500">&times;</button>
+        </div>
+        <form id="editForm" method="post" class="space-y-4">
+            <input type="hidden" name="busNumber" id="edit-busNumber">
+            <input type="hidden" name="licensePlate" id="edit-licensePlate">
+            <input type="hidden" name="capacity" id="edit-capacity-hidden">
+            <input type="hidden" name="assignedRoad" id="edit-assignedRoad-hidden">
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p class="text-sm"><strong>Numero:</strong> <span id="view-busNumber"></span></p>
+                <p class="text-sm"><strong>Placa:</strong> <span id="view-plate"></span></p>
+                <p class="text-sm"><strong>Capacidad:</strong> <span id="view-cap"></span></p>
+                <p class="text-sm"><strong>Ruta Actual:</strong> <span id="view-road"></span></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Nuevo Numero</label>
+                <input type="text" id="edit-busNumber-input" class="w-full border rounded-lg px-3 py-2" oninput="syncBusFields()">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Nueva Placa</label>
+                <input type="text" id="edit-plate-input" class="w-full border rounded-lg px-3 py-2" oninput="syncBusFields()">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Nueva Capacidad</label>
+                <input type="number" id="edit-cap-input" min="10" max="200" class="w-full border rounded-lg px-3 py-2" oninput="syncBusFields()">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Nueva Ruta Asignada</label>
+                <select id="edit-road-input" class="w-full border rounded-lg px-3 py-2" onchange="syncBusFields()">
+                    <option value="">Sin ruta asignada</option>
+                    {% for r in roads %}
+                    <option value="{{ r._id }}">{{ r.name }} ({{ r.routeCode }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Guardar Cambios</button>
+        </form>
+    </div>
+</div>
+<script>
+function openEditBus(id, busNumber, plate, capacity, assignedRoad, assignedRoadName) {
+    document.getElementById('editForm').action = `/buses/${id}`;
+    document.getElementById('edit-busNumber-input').value = busNumber;
+    document.getElementById('edit-plate-input').value = plate;
+    document.getElementById('edit-cap-input').value = capacity;
+    document.getElementById('edit-road-input').value = assignedRoad || "";
+    document.getElementById('view-busNumber').textContent = busNumber;
+    document.getElementById('view-plate').textContent = plate;
+    document.getElementById('view-cap').textContent = capacity;
+    document.getElementById('view-road').textContent = assignedRoadName || "-";
+    syncBusFields();
+    document.getElementById('editModal').classList.remove('hidden');
+}
+function syncBusFields() {
+    document.getElementById('edit-busNumber').value = document.getElementById('edit-busNumber-input').value;
+    document.getElementById('edit-licensePlate').value = document.getElementById('edit-plate-input').value;
+    document.getElementById('edit-capacity-hidden').value = document.getElementById('edit-cap-input').value;
+    document.getElementById('edit-assignedRoad-hidden').value = document.getElementById('edit-road-input').value;
+}
+</script>
+{% endblock %}
