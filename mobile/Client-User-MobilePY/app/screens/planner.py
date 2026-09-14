@@ -1,16 +1,19 @@
 import flet as ft
-import flet.map as fmap
+import flet_map as fmap
 import httpx
 from app.stores.auth_store import auth_store
 from app.stores.planner_store import planner_store
 
+
 def PlannerScreen(page: ft.Page):
     origin_field = ft.TextField(label="Origen (ej: Irtra Petapa)", width=300)
     dest_field = ft.TextField(label="Destino (ej: USAC)", width=300)
-    
+    tap_mode = ft.Text("Toca el mapa para seleccionar puntos", size=12, color=ft.Colors.GREY_600)
+
+    status_text = ft.Text("", size=12, color=ft.Colors.GREY_600)
     res_tiempo = ft.Text(size=14, weight=ft.FontWeight.BOLD)
-    res_distancia = ft.Text(size=14, color=ft.colors.GREY_700)
-    
+    res_distancia = ft.Text(size=14, color=ft.Colors.GREY_700)
+
     result_card = ft.Container(
         content=ft.Column([
             ft.Text("Resumen del Viaje", weight=ft.FontWeight.BOLD),
@@ -18,122 +21,247 @@ def PlannerScreen(page: ft.Page):
             res_distancia
         ]),
         visible=False,
-        bgcolor=ft.colors.GREEN_50,
+        bgcolor=ft.Colors.GREEN_50,
         padding=10,
         border_radius=10,
         width=300
     )
 
-    marker_layer = fmap.MarkerLayer(markers=[])
-    polyline_layer = fmap.PolylineLayer(polylines=[])
+    coords = {"origin": None, "dest": None}
+    next_point = "origin"
 
-    mapa = fmap.Map(
-        expand=True,
-        initial_center=fmap.MapLatitudeLongitude(14.62, -90.52),
-        initial_zoom=12,
-        interaction_configuration=fmap.MapInteractionConfiguration(
-            flags=fmap.MapInteractiveFlag.ALL
-        ),
-        layers=[
-            fmap.TileLayer(
-                url_template="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-            ),
-            polyline_layer,
-            marker_layer,
-        ],
-    )
+    def build_map(center_lat=14.62, center_lon=-90.52, zoom=12, markers=None, pts=None, tap_handler=None):
+        layers = [fmap.TileLayer(
+            url_template="https://tile-a.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+            user_agent_package_name="com.tconecta.app",
+        )]
+        if pts:
+            layers.append(fmap.PolylineLayer(polylines=[
+                fmap.PolylineMarker(coordinates=pts, color=ft.Colors.BLUE_700, stroke_width=4)
+            ]))
+        if markers:
+            layers.append(fmap.MarkerLayer(markers=markers))
+
+        return fmap.Map(
+            expand=True,
+            initial_center=fmap.MapLatitudeLongitude(center_lat, center_lon),
+            initial_zoom=zoom,
+            layers=layers,
+            on_tap=tap_handler,
+        )
+
+    def on_map_tap(e):
+        nonlocal next_point
+        if not e.coordinates:
+            return
+        lat = e.coordinates.latitude
+        lon = e.coordinates.longitude
+        if next_point == "origin":
+            coords["origin"] = (lat, lon)
+            origin_field.value = f"({lat:.4f}, {lon:.4f})"
+            next_point = "dest"
+            tap_mode.value = "Ahora toca para el destino"
+        else:
+            coords["dest"] = (lat, lon)
+            dest_field.value = f"({lat:.4f}, {lon:.4f})"
+            next_point = "origin"
+            tap_mode.value = "Puntos seleccionados. Calcular ruta!"
+        update_map_visual()
+        page.update()
+
+    def update_map_visual():
+        markers = []
+        if coords["origin"]:
+            markers.append(fmap.Marker(
+                content=ft.Icon(ft.Icons.LOCATION_ON, color=ft.Colors.GREEN, size=40),
+                coordinates=fmap.MapLatitudeLongitude(*coords["origin"]),
+            ))
+        if coords["dest"]:
+            markers.append(fmap.Marker(
+                content=ft.Icon(ft.Icons.LOCATION_ON, color=ft.Colors.RED, size=40),
+                coordinates=fmap.MapLatitudeLongitude(*coords["dest"]),
+            ))
+        center_lat = 14.62
+        center_lon = -90.52
+        zoom = 12
+        if coords["origin"] and coords["dest"]:
+            center_lat = (coords["origin"][0] + coords["dest"][0]) / 2
+            center_lon = (coords["origin"][1] + coords["dest"][1]) / 2
+            zoom = 13
+        elif coords["origin"]:
+            center_lat, center_lon = coords["origin"]
+            zoom = 15
+
+        map_container.content = build_map(
+            center_lat=center_lat, center_lon=center_lon, zoom=zoom,
+            markers=markers if markers else None, tap_handler=on_map_tap,
+        )
 
     map_container = ft.Container(
-        content=mapa,
+        content=build_map(tap_handler=on_map_tap),
         height=350,
         border_radius=10,
-        clip_behavior=ft.ClipBehavior.HARD_EDGE
+        clip_behavior=ft.ClipBehavior.HARD_EDGE,
     )
-
-    coords = {"origin": None, "dest": None}
 
     async def geocode(query):
         try:
-            async with httpx.AsyncClient() as client:
-                res = await client.get(f"https://nominatim.openstreetmap.org/search?q={query}&countrycodes=gt&format=json&limit=1")
+            async with httpx.AsyncClient(timeout=15) as client:
+                res = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={"q": query, "countrycodes": "gt", "format": "json", "limit": "1"},
+                    headers={"User-Agent": "TConectaApp/1.0"},
+                )
                 data = res.json()
                 if data:
                     return float(data[0]["lat"]), float(data[0]["lon"])
-        except Exception:
-            pass
+        except Exception as ex:
+            print(f"Geocode error: {ex}")
         return None
 
-    async def on_calculate(e):
+    async def do_my_location():
+        status_text.value = "Obteniendo ubicacion..."
+        page.update()
+        loc = await geocode("Guatemala, Zona 10, Guatemala")
+        if loc:
+            coords["origin"] = loc
+            origin_field.value = f"Zona 10 ({loc[0]:.4f}, {loc[1]:.4f})"
+            next_point = "dest"
+            tap_mode.value = "Ahora toca el mapa para el destino"
+            update_map_visual()
+            status_text.value = "Ubicacion detectada. Selecciona destino."
+        else:
+            status_text.value = "No se pudo obtener ubicacion"
+        page.update()
+
+    async def do_calculate():
+        origin_text = origin_field.value.strip()
+        dest_text = dest_field.value.strip()
+
+        if not origin_text and not coords["origin"]:
+            status_text.value = "Ingresa un origen o toca el mapa"
+            page.update()
+            return
+        if not dest_text and not coords["dest"]:
+            status_text.value = "Ingresa un destino o toca el mapa"
+            page.update()
+            return
+
+        status_text.value = "Buscando ubicaciones..."
+        result_card.visible = False
         origin_btn.disabled = True
         page.update()
-        
-        orig_c = await geocode(origin_field.value)
-        dest_c = await geocode(dest_field.value)
-        
-        if not orig_c or not dest_c:
-            page.snack_bar = ft.SnackBar(ft.Text("No se encontró alguna de las ubicaciones"))
-            page.snack_bar.open = True
+
+        orig_c = coords["origin"]
+        dest_c = coords["dest"]
+
+        if not orig_c and origin_text:
+            orig_c = await geocode(origin_text)
+        if not dest_c and dest_text:
+            dest_c = await geocode(dest_text)
+
+        if not orig_c:
+            status_text.value = "No se encontro el origen"
             origin_btn.disabled = False
             page.update()
             return
-            
+        if not dest_c:
+            status_text.value = "No se encontro el destino"
+            origin_btn.disabled = False
+            page.update()
+            return
+
         coords["origin"] = orig_c
         coords["dest"] = dest_c
-        
-        marker_layer.markers = [
-            fmap.Marker(content=ft.Icon(ft.icons.LOCATION_ON, color="green", size=40), coordinates=fmap.MapLatitudeLongitude(*orig_c)),
-            fmap.Marker(content=ft.Icon(ft.icons.LOCATION_ON, color="red", size=40), coordinates=fmap.MapLatitudeLongitude(*dest_c))
+
+        status_text.value = "Calculando ruta..."
+        page.update()
+
+        markers = [
+            fmap.Marker(content=ft.Icon(ft.Icons.LOCATION_ON, color=ft.Colors.GREEN, size=40), coordinates=fmap.MapLatitudeLongitude(*orig_c)),
+            fmap.Marker(content=ft.Icon(ft.Icons.LOCATION_ON, color=ft.Colors.RED, size=40), coordinates=fmap.MapLatitudeLongitude(*dest_c)),
         ]
 
+        mid_lat = (orig_c[0] + dest_c[0]) / 2
+        mid_lon = (orig_c[1] + dest_c[1]) / 2
+
+        polyline_pts = None
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 url = f"https://router.project-osrm.org/route/v1/driving/{orig_c[1]},{orig_c[0]};{dest_c[1]},{dest_c[0]}?geometries=geojson"
                 res = await client.get(url)
                 route_data = res.json()
-                
+
                 if route_data.get("routes"):
                     route = route_data["routes"][0]
-                    puntos = [fmap.MapLatitudeLongitude(p[1], p[0]) for p in route["geometry"]["coordinates"]]
-                    
-                    polyline_layer.polylines = [
-                        fmap.Polyline(coordinates=puntos, color=ft.colors.BLUE_700, stroke_width=4)
-                    ]
-                    
+                    polyline_pts = [fmap.MapLatitudeLongitude(p[1], p[0]) for p in route["geometry"]["coordinates"]]
+
                     dist_km = route["distance"] / 1000
                     mins = round(route["duration"] / 60)
                     res_tiempo.value = f"Tiempo estimado: {mins} min"
                     res_distancia.value = f"Distancia: {dist_km:.2f} km"
                     result_card.visible = True
-                    
-                    mapa.initial_center = fmap.MapLatitudeLongitude((orig_c[0]+dest_c[0])/2, (orig_c[1]+dest_c[1])/2)
-                    mapa.initial_zoom = 13
+                    status_text.value = ""
+                else:
+                    status_text.value = "No se encontro ruta entre los puntos"
         except Exception as ex:
+            status_text.value = f"Error calculando ruta: {ex}"
             print("Error ruta:", ex)
-            
+
+        map_container.content = build_map(
+            center_lat=mid_lat, center_lon=mid_lon, zoom=13,
+            markers=markers, pts=polyline_pts, tap_handler=on_map_tap,
+        )
         origin_btn.disabled = False
         page.update()
 
-    async def on_pay(e):
+    async def do_pay():
         token = auth_store.token
-        if token and coords["origin"] and coords["dest"]:
-            await planner_store.plan_trip(
-                token, 
-                originLat=coords["origin"][0], 
-                originLon=coords["origin"][1], 
-                destLat=coords["dest"][0], 
-                destLon=coords["dest"][1]
-            )
-            page.snack_bar = ft.SnackBar(ft.Text("Viaje pagado con éxito!", color=ft.colors.WHITE), bgcolor=ft.colors.GREEN)
+        if not token:
+            page.snack_bar = ft.SnackBar(ft.Text("Inicia sesion primero"))
             page.snack_bar.open = True
             page.update()
+            return
+        if not coords["origin"] or not coords["dest"]:
+            page.snack_bar = ft.SnackBar(ft.Text("Calcula una ruta primero"))
+            page.snack_bar.open = True
+            page.update()
+            return
+        status_text.value = "Procesando pago..."
+        page.update()
+        success = await planner_store.plan_trip(
+            token,
+            originLat=coords["origin"][0],
+            originLon=coords["origin"][1],
+            destLat=coords["dest"][0],
+            destLon=coords["dest"][1]
+        )
+        if success:
+            page.snack_bar = ft.SnackBar(ft.Text("Viaje pagado con exito!", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+            page.snack_bar.open = True
+            status_text.value = ""
+        else:
+            page.snack_bar = ft.SnackBar(ft.Text("Error al pagar viaje"))
+            page.snack_bar.open = True
+            status_text.value = ""
+        page.update()
 
-    origin_btn = ft.ElevatedButton("Calcular Ruta", on_click=on_calculate, width=300, bgcolor=ft.colors.BLUE_900, color=ft.colors.WHITE)
-    pay_btn = ft.ElevatedButton("Pagar Viaje (Descontar Saldo)", on_click=on_pay, width=300, bgcolor=ft.colors.GREEN_600, color=ft.colors.WHITE)
+    location_btn = ft.ElevatedButton("Mi Ubicacion", width=300, bgcolor=ft.Colors.GREY_600, color=ft.Colors.WHITE)
+    location_btn.on_click = lambda e: page.run_task(do_my_location)
+
+    origin_btn = ft.ElevatedButton("Calcular Ruta", width=300, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE)
+    origin_btn.on_click = lambda e: page.run_task(do_calculate)
+
+    pay_btn = ft.ElevatedButton("Pagar Viaje (Descontar Saldo)", width=300, bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+    pay_btn.on_click = lambda e: page.run_task(do_pay)
 
     return ft.Column(
         [
             ft.Text("Planificador de Viajes", size=24, weight=ft.FontWeight.BOLD),
             map_container,
+            tap_mode,
+            status_text,
+            location_btn,
             origin_field,
             dest_field,
             origin_btn,

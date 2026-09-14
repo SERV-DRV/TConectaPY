@@ -1,3 +1,4 @@
+import asyncio
 from app.api_client import admin_request, client_request
 
 
@@ -15,9 +16,13 @@ class PlannerStore:
                 admin_request("GET", "/roads/all?status=ACTIVE", token=token),
                 admin_request("GET", "/stations/all?status=ACTIVE", token=token),
             )
+            print(f"[EXPLORE] Roads response keys: {list(roads_data.keys()) if isinstance(roads_data, dict) else type(roads_data)}")
+            print(f"[EXPLORE] Stations response keys: {list(stations_data.keys()) if isinstance(stations_data, dict) else type(stations_data)}")
             self.roads = roads_data.get("data", [])
             self.stations = stations_data.get("data", [])
-        except Exception:
+            print(f"[EXPLORE] Roads: {len(self.roads)}, Stations: {len(self.stations)}")
+        except Exception as ex:
+            print(f"[EXPLORE ERROR] {ex}")
             self.roads = []
             self.stations = []
         finally:
@@ -38,7 +43,5 @@ class PlannerStore:
         except Exception:
             self.history = []
 
-
-import asyncio
 
 planner_store = PlannerStore()

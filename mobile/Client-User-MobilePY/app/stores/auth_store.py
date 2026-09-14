@@ -21,7 +21,7 @@ class AuthStore:
     async def login(self, cui: str, password: str):
         self.loading = True
         try:
-            data = await auth_request("POST", "/Auth/login", data={"cui": cui, "password": password})
+            data = await auth_request("POST", "/Auth/login", json={"cui": cui, "password": password})
             token = data.get("token") or data.get("accessToken")
             if token:
                 self.token = token
@@ -30,7 +30,8 @@ class AuthStore:
                 save("token", token)
                 return True
             return False
-        except Exception:
+        except Exception as ex:
+            print(f"[AUTH ERROR] {ex}")
             return False
         finally:
             self.loading = False
@@ -38,7 +39,7 @@ class AuthStore:
     async def register(self, cui: str, email: str, password: str):
         self.loading = True
         try:
-            data = await auth_request("POST", "/Auth/register", data={"cui": cui, "email": email, "password": password})
+            data = await auth_request("POST", "/Auth/register", json={"cui": cui, "email": email, "password": password})
             token = data.get("token") or data.get("accessToken")
             if token:
                 self.token = token
@@ -47,7 +48,8 @@ class AuthStore:
                 save("token", token)
                 return True
             return False
-        except Exception:
+        except Exception as ex:
+            print(f"[AUTH ERROR] {ex}")
             return False
         finally:
             self.loading = False

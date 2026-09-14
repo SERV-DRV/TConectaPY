@@ -1,6 +1,6 @@
 import flet as ft
 from app.stores.auth_store import auth_store
-from app.navigation.router import AppRouter
+from app.navigation import show_login, show_register, show_main
 
 
 def main(page: ft.Page):
@@ -10,9 +10,11 @@ def main(page: ft.Page):
     page.window.height = 700
 
     auth_store.init_auth()
-    router = AppRouter(page)
-    page.add(router.build())
-    page.update()
+
+    if auth_store.is_authenticated:
+        show_main(page)
+    else:
+        show_login(page)
 
 
-ft.app(target=main)
+ft.run(main)

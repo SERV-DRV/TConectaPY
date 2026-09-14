@@ -15,9 +15,23 @@ class AppRouter:
 
     def build(self):
         if not auth_store.is_authenticated:
+            return self.build_screen("login")
+
+        return self.build_screen("main")
+
+    def build_screen(self, name: str):
+        if name == "login":
             return ft.View(
-                "/auth",
+                "/login",
                 [LoginScreen(self.page)],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                vertical_alignment=ft.MainAxisAlignment.CENTER,
+            )
+
+        if name == "register":
+            return ft.View(
+                "/register",
+                [RegisterScreen(self.page)],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 vertical_alignment=ft.MainAxisAlignment.CENTER,
             )
@@ -79,7 +93,5 @@ class AppRouter:
 
     def go_login(self):
         self.page.views.clear()
-        self.page.views.append(
-            ft.View("/auth", [LoginScreen(self.page)])
-        )
+        self.page.views.append(self.build_screen("login"))
         self.page.update()

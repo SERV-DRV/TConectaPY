@@ -7,11 +7,8 @@ def ProfileScreen(page: ft.Page):
 
     def on_logout(e):
         auth_store.logout()
-        from app.navigation.router import AppRouter
-        router = AppRouter(page)
-        page.views.clear()
-        page.views.append(router.build())
-        page.update()
+        from app.navigation import show_login
+        show_login(page)
 
     return ft.Column(
         [
@@ -24,7 +21,7 @@ def ProfileScreen(page: ft.Page):
                         content=ft.Text(user.get("role", "User"), size=10, color=ft.Colors.WHITE),
                         bgcolor=ft.Colors.PURPLE_500,
                         border_radius=5,
-                        padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                        padding=ft.Padding(left=8, right=8, top=2, bottom=2),
                     )]),
                     ft.Row([ft.Text("Estado:"), ft.Text("Activo", color=ft.Colors.GREEN_500)]),
                     ft.Divider(),

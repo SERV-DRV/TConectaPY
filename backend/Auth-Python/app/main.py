@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import close_db, init_db
 from app.database_mongo import connect_mongo, close_mongo
 from app.models.seed import seed_database
-from app.routers import auth, transaction
+from app.routers import auth, transaction, wallet
 
 
 @asynccontextmanager
@@ -69,6 +69,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ── Rutas ───────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/Auth", tags=["Auth"])
 app.include_router(transaction.router, prefix="/api/transaction", tags=["Transaction"])
+app.include_router(wallet.router, prefix="/api/wallets", tags=["Wallet"])
 
 
 @app.get("/api/health")

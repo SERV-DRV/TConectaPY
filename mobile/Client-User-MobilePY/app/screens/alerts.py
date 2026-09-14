@@ -6,7 +6,7 @@ from app.stores.alerts_store import alerts_store
 def AlertsScreen(page: ft.Page):
     alerts_list = ft.Column()
 
-    async def load_alerts(e=None):
+    async def load_alerts():
         token = auth_store.token
         if token:
             await alerts_store.fetch_alerts(token)
@@ -22,7 +22,7 @@ def AlertsScreen(page: ft.Page):
                                     content=ft.Text(alert_type, size=10, color=ft.Colors.WHITE),
                                     bgcolor=color,
                                     border_radius=5,
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                    padding=ft.Padding(left=8, right=8, top=2, bottom=2),
                                 ),
                                 ft.Text(alert.get("created_at", ""), size=10, color=ft.Colors.GREY_500),
                             ]),
@@ -36,7 +36,11 @@ def AlertsScreen(page: ft.Page):
                 alerts_list.controls.append(ft.Text("No hay alertas", color=ft.Colors.GREY_500))
             page.update()
 
-    page.on_mount = load_alerts
+    def on_mount(e):
+        page.run_task(load_alerts)
+
+    page.on_mount = on_mount
+    page.run_task(load_alerts)
 
     return ft.Column(
         [
