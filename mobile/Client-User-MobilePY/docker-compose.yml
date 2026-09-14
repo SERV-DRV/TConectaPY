@@ -3,12 +3,15 @@ services:
     build: .
     user: builder
     environment:
-      - PATH=/home/builder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      - ANDROIDSDK=/home/builder/.buildozer/android/platform/android-sdk
+      - ANDROIDNDK=/home/builder/.buildozer/android/platform/android-ndk-r28c
+      - ANDROIDAPI=33
+      - ANDROIDMINAPI=21
     volumes:
       - .:/home/builder/app
     command: >
-      bash -c "sudo chown -R builder:builder /home/builder/app/app /home/builder/app/bin /home/builder/app/pyproject.toml /home/builder/app/buildozer.spec 2>/dev/null;
+      bash -c "set -e;
       cd /home/builder/app;
-      buildozer android debug 2>&1 || true;
-      yes | /home/builder/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager 'platforms;android-33' 2>/dev/null;
+      echo '=== Building APK ===';
       buildozer android debug 2>&1"
