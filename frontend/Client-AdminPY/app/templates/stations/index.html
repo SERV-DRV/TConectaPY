@@ -68,10 +68,12 @@
             <button onclick="document.getElementById('modal').classList.add('hidden')" class="text-gray-500">&times;</button>
         </div>
         <form method="post" action="/stations" class="space-y-4">
-            <input name="name" placeholder="Nombre" required class="w-full border rounded-lg px-3 py-2">
+            <input name="name" placeholder="Nombre (ej: El Carmen)" required class="w-full border rounded-lg px-3 py-2">
+            <input name="stationCode" placeholder="Codigo (ej: E01)" required class="w-full border rounded-lg px-3 py-2">
             <select name="typeStation" required class="w-full border rounded-lg px-3 py-2">
                 <option value="CENTRALES">Centrales</option>
                 <option value="CARRIL LATERAL">Carril Lateral</option>
+                <option value="TRASBORDO">Trasbordo</option>
                 <option value="TERMINALES">Terminales</option>
             </select>
             <div>
