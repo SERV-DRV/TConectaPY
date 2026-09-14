@@ -36,10 +36,6 @@ def AlertsScreen(page: ft.Page):
                 alerts_list.controls.append(ft.Text("No hay alertas", color=ft.Colors.GREY_500))
             page.update()
 
-    def on_mount(e):
-        page.run_task(load_alerts)
-
-    page.on_mount = on_mount
     page.run_task(load_alerts)
 
     return ft.Column(

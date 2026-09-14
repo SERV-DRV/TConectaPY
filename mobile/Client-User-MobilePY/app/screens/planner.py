@@ -1,9 +1,16 @@
 import flet as ft
-import flet_map as fmap
 import httpx
 from app.stores.auth_store import auth_store
 from app.stores.planner_store import planner_store
 from app.stores.wallet_store import wallet_store
+from app.utils.ui_helpers import show_snackbar
+
+try:
+    import flet_map as fmap
+    HAS_FLET_MAP = True
+except Exception as ex:
+    print(f"[PLANNER] flet_map import error: {ex}")
+    HAS_FLET_MAP = False
 
 
 def PlannerScreen(page: ft.Page):
@@ -28,11 +35,32 @@ def PlannerScreen(page: ft.Page):
         width=300
     )
 
+    if not HAS_FLET_MAP:
+        def _no_map_msg():
+            return ft.Column([
+                ft.Icon(ft.Icons.MAP, size=60, color=ft.Colors.GREY_400),
+                ft.Text("Mapa no disponible", size=18, color=ft.Colors.GREY_600),
+                ft.Text("flet-map no se pudo cargar", size=12, color=ft.Colors.GREY_500),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
+        return ft.Column([
+            ft.Text("Planificador de Viajes", size=24, weight=ft.FontWeight.BOLD),
+            _no_map_msg(),
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
+
     coords = {"origin": None, "dest": None}
     next_point = "origin"
     current_itinerary = ""
 
     def build_map(center_lat=14.62, center_lon=-90.52, zoom=12, markers=None, pts=None, tap_handler=None):
+        if not HAS_FLET_MAP:
+            return ft.Container(
+                content=ft.Column([
+                    ft.Icon(ft.Icons.MAP, size=60, color=ft.Colors.GREY_400),
+                    ft.Text("Mapa no disponible", size=16, color=ft.Colors.GREY_600),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                alignment=ft.alignment.center,
+                height=350,
+            )
         layers = [fmap.TileLayer(
             url_template="https://tile-a.openstreetmap.fr/hot/{z}/{x}/{y}.png",
             user_agent_package_name="com.tconecta.app",
@@ -103,7 +131,6 @@ def PlannerScreen(page: ft.Page):
         content=build_map(tap_handler=on_map_tap),
         height=350,
         border_radius=10,
-        clip_behavior=ft.ClipBehavior.HARD_EDGE,
     )
 
     async def geocode(query):
@@ -246,14 +273,10 @@ def PlannerScreen(page: ft.Page):
     async def do_pay():
         token = auth_store.token
         if not token:
-            page.snack_bar = ft.SnackBar(ft.Text("Inicia sesion primero"))
-            page.snack_bar.open = True
-            page.update()
+            show_snackbar(page, "Inicia sesion primero")
             return
         if not coords["origin"] or not coords["dest"]:
-            page.snack_bar = ft.SnackBar(ft.Text("Calcula una ruta primero"))
-            page.snack_bar.open = True
-            page.update()
+            show_snackbar(page, "Calcula una ruta primero")
             return
         status_text.value = "Procesando pago..."
         page.update()
@@ -267,12 +290,10 @@ def PlannerScreen(page: ft.Page):
         )
         if success:
             await wallet_store.fetch_balance(token)
-            page.snack_bar = ft.SnackBar(ft.Text("Viaje pagado con exito!", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
-            page.snack_bar.open = True
+            show_snackbar(page, "Viaje pagado con exito!", bgcolor=ft.Colors.GREEN)
             status_text.value = ""
         else:
-            page.snack_bar = ft.SnackBar(ft.Text("Error al pagar viaje"))
-            page.snack_bar.open = True
+            show_snackbar(page, "Error al pagar viaje", bgcolor=ft.Colors.RED_500)
             status_text.value = ""
         page.update()
 
