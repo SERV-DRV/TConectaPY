@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi_mcp import FastApiMCP
 
 from app.config import settings
 from app.database import close_db, init_db
@@ -94,3 +95,9 @@ async def root():
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+try:
+    mcp = FastApiMCP(app)
+    mcp.mount_sse(app, mount_path="/sse")
+except Exception as e:
+    print(f"[TransmetroAuth] Error al montar SSE: {e}")
