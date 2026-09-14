@@ -1,11 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-{% set totalSpent = 0 %}
-{% set totalDistance = 0 %}
-{% for t in tours %}
-    {% set totalSpent = totalSpent + t.get('chargedFare', 0) %}
-    {% set totalDistance = totalDistance + (t.get('distanceMeters', 0) / 1000) %}
-{% endfor %}
 
 <div class="max-w-5xl mx-auto space-y-6 py-8 px-4">
     <!-- Header -->

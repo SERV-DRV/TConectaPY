@@ -29,6 +29,8 @@ async def profile_page(request: Request):
         pass
     return templates.TemplateResponse(request, "profile/index.html", {
         "user": user, "email": email, "tours": tours,
+        "totalSpent": sum(t.get("chargedFare", 0) for t in tours),
+        "totalDistance": sum(t.get("distanceMeters", 0) / 1000 for t in tours),
     })
 
 
