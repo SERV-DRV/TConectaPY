@@ -5,7 +5,7 @@ package.domain = com.tconecta
 version = 1.0.0
 source.dir = app
 source.include_exts = py,png,jpg,kv,atlas,ttf
-requirements = python3,flet,flet-map,httpx
+requirements = python3,flet,flet-map,httpx,pip==23.3.2
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 android.api = 33
 android.minapi = 21
