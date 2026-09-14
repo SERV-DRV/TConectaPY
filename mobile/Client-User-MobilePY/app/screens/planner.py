@@ -3,6 +3,7 @@ import flet_map as fmap
 import httpx
 from app.stores.auth_store import auth_store
 from app.stores.planner_store import planner_store
+from app.stores.wallet_store import wallet_store
 
 
 def PlannerScreen(page: ft.Page):
@@ -29,6 +30,7 @@ def PlannerScreen(page: ft.Page):
 
     coords = {"origin": None, "dest": None}
     next_point = "origin"
+    current_itinerary = ""
 
     def build_map(center_lat=14.62, center_lon=-90.52, zoom=12, markers=None, pts=None, tap_handler=None):
         layers = [fmap.TileLayer(
@@ -135,6 +137,7 @@ def PlannerScreen(page: ft.Page):
         page.update()
 
     async def do_calculate():
+        nonlocal current_itinerary
         origin_text = origin_field.value.strip()
         dest_text = dest_field.value.strip()
 
@@ -202,6 +205,31 @@ def PlannerScreen(page: ft.Page):
                     res_distancia.value = f"Distancia: {dist_km:.2f} km"
                     result_card.visible = True
                     status_text.value = ""
+
+                    current_itinerary = ""
+                    stations = planner_store.stations
+                    roads = planner_store.roads
+                    if stations and orig_c and dest_c:
+                        def station_dist(slat, slon, plat, plon):
+                            import math
+                            return math.sqrt((slat - plat)**2 + (slon - plon)**2)
+                        nearest_orig = min(stations, key=lambda s: station_dist(
+                            s.get("location", {}).get("coordinates", [0, 0])[1],
+                            s.get("location", {}).get("coordinates", [0, 0])[0],
+                            orig_c[0], orig_c[1]))
+                        nearest_dest = min(stations, key=lambda s: station_dist(
+                            s.get("location", {}).get("coordinates", [0, 0])[1],
+                            s.get("location", {}).get("coordinates", [0, 0])[0],
+                            dest_c[0], dest_c[1]))
+                        orig_name = nearest_orig.get("name", "Origen")
+                        dest_name = nearest_dest.get("name", "Destino")
+                        road_name = roads[0].get("name", "ruta") if roads else "ruta"
+                        if nearest_orig.get("_id") == nearest_dest.get("_id"):
+                            current_itinerary = f"1. Camina hacia Estacion {orig_name}.\n2. Toma ruta con transbordo hacia troncales.\n3. Baja en Estacion {dest_name}.\n4. Camina hacia tu destino."
+                        else:
+                            current_itinerary = f"1. Camina hacia Estacion {orig_name}.\n2. Aborda Ruta {road_name}.\n3. Baja en Estacion {dest_name}.\n4. Camina hacia tu destino."
+                    else:
+                        current_itinerary = ""
                 else:
                     status_text.value = "No se encontro ruta entre los puntos"
         except Exception as ex:
@@ -234,9 +262,11 @@ def PlannerScreen(page: ft.Page):
             originLat=coords["origin"][0],
             originLon=coords["origin"][1],
             destLat=coords["dest"][0],
-            destLon=coords["dest"][1]
+            destLon=coords["dest"][1],
+            itinerary=current_itinerary,
         )
         if success:
+            await wallet_store.fetch_balance(token)
             page.snack_bar = ft.SnackBar(ft.Text("Viaje pagado con exito!", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
             page.snack_bar.open = True
             status_text.value = ""

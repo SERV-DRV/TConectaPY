@@ -90,4 +90,5 @@ def ExploreScreen(page: ft.Page):
             stations_container,
         ],
         expand=True,
+        scroll=ft.ScrollMode.AUTO,
     )

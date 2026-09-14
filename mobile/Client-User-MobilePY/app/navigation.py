@@ -52,7 +52,10 @@ def show_main(page: ft.Page):
 
     def on_tab_change(e):
         index = nav_bar.selected_index
-        content_area.content = get_screen(index)
+        screen = get_screen(index)
+        content_area.content = screen
+        if hasattr(screen, '_refresh'):
+            page.run_task(screen._refresh)
         page.update()
 
     nav_bar = ft.NavigationBar(

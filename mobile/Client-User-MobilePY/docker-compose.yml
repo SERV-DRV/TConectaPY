@@ -7,4 +7,4 @@ services:
     volumes:
       - .:/home/builder/app
     command: >
-      bash -c "sudo chown -R builder:builder /home/builder/app && cd /home/builder/app && buildozer android debug"
+      bash -c "sudo chown -R builder:builder /home/builder/app/app /home/builder/app/bin /home/builder/app/pyproject.toml /home/builder/app/buildozer.spec /home/builder/app/*.md 2>/dev/null; cd /home/builder/app && buildozer android debug 2>&1"

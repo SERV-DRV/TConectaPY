@@ -30,10 +30,13 @@ class PlannerStore:
 
     async def plan_trip(self, token: str, **kwargs):
         try:
-            await client_request("POST", "/tours/plan", token=token, json=kwargs)
+            print(f"[PLANNER] plan_trip kwargs: {kwargs}")
+            result = await client_request("POST", "/tours/plan", token=token, json=kwargs)
+            print(f"[PLANNER] plan_trip result: {result}")
             await self.fetch_history(token)
             return True
-        except Exception:
+        except Exception as ex:
+            print(f"[PLANNER ERROR] plan_trip: {ex}")
             return False
 
     async def fetch_history(self, token: str):

@@ -135,7 +135,7 @@ def WalletScreen(page: ft.Page):
 
     page.run_task(load_balance)
 
-    return ft.Column(
+    col = ft.Column(
         [
             ft.Container(
                 content=ft.Column([
@@ -159,3 +159,5 @@ def WalletScreen(page: ft.Page):
         spacing=15,
         scroll=ft.ScrollMode.AUTO,
     )
+    col._refresh = load_balance
+    return col
