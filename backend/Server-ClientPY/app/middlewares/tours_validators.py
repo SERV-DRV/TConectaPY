@@ -6,7 +6,8 @@ class BaseSchema(BaseModel):
 
 
 class PlanTourBody(BaseSchema):
-    user_id: str = Field(
+    user_id: str | None = Field(
+        default=None,
         validation_alias=AliasChoices("user_id", "userId"),
         alias="userId",
     )
