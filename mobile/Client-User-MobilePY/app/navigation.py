@@ -68,8 +68,6 @@ def show_main(page: ft.Page):
         ],
         on_change=on_tab_change,
         selected_index=0,
-        bgcolor=ft.Colors.WHITE,
-        indicator_color=ft.Colors.GREEN_500,
     )
 
     content_area = ft.Container(content=get_screen(0), expand=True)

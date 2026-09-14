@@ -1,20 +1,44 @@
 import flet as ft
-from app.stores.auth_store import auth_store
-from app.navigation import show_login, show_register, show_main
 
 
 def main(page: ft.Page):
     page.title = "T-Conecta Ciudadano"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window.width = 400
-    page.window.height = 700
+    try:
+        page.window.width = 400
+        page.window.height = 700
+    except Exception:
+        pass
 
-    auth_store.init_auth()
+    try:
+        from app.stores.auth_store import auth_store
+        auth_store.init_auth()
+    except Exception as ex:
+        print(f"[MAIN] init_auth error: {ex}")
 
-    if auth_store.is_authenticated:
-        show_main(page)
-    else:
-        show_login(page)
+    try:
+        from app.navigation import show_login, show_main
+        if auth_store.is_authenticated:
+            show_main(page)
+        else:
+            show_login(page)
+    except Exception as ex:
+        print(f"[MAIN] navigation error: {ex}")
+        try:
+            from app.navigation import show_login
+            show_login(page)
+        except Exception as ex2:
+            print(f"[MAIN] fallback login error: {ex2}")
+            page.controls.append(
+                ft.Column(
+                    [
+                        ft.Text("T-Conecta", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                        ft.Text("Error al iniciar. Reinstala la app.", color=ft.Colors.RED_500),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                )
+            )
+            page.update()
 
 
 ft.run(main)
