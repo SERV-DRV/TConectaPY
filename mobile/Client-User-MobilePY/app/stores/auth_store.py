@@ -16,7 +16,20 @@ class AuthStore:
         if token:
             self.token = token
             self.user = decode_jwt(token)
-            self.is_authenticated = bool(self.user)
+            if not self.user:
+                self.token = None
+                self.is_authenticated = False
+                clear()
+                return
+            import time
+            exp = self.user.get("exp")
+            if exp and exp < time.time():
+                self.token = None
+                self.user = None
+                self.is_authenticated = False
+                clear()
+                return
+            self.is_authenticated = True
 
     async def login(self, cui: str, password: str):
         self.loading = True

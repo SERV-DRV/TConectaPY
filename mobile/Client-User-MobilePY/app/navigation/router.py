@@ -9,89 +9,105 @@ from app.screens.alerts import AlertsScreen
 from app.screens.profile import ProfileScreen
 
 
+SCREEN_FACTORIES = [
+    PlannerScreen,
+    WalletScreen,
+    ExploreScreen,
+    AlertsScreen,
+    ProfileScreen,
+]
+
+
+def _build_login_view(page: ft.Page):
+    return ft.Column(
+        [LoginScreen(page)],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        alignment=ft.MainAxisAlignment.CENTER,
+        expand=True,
+    )
+
+
+def _build_register_view(page: ft.Page):
+    return ft.Column(
+        [RegisterScreen(page)],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        alignment=ft.MainAxisAlignment.CENTER,
+        expand=True,
+    )
+
+
+def _build_main_view(page: ft.Page):
+    screens_cache = {}
+    content_area = ft.Container(expand=True)
+
+    def get_screen(index):
+        builders = [
+            lambda: PlannerScreen(page),
+            lambda: WalletScreen(page),
+            lambda: ExploreScreen(page),
+            lambda: AlertsScreen(page),
+            lambda: ProfileScreen(page),
+        ]
+        if index not in screens_cache:
+            screens_cache[index] = builders[index]()
+        return screens_cache[index]
+
+    def on_tab_change(e):
+        index = nav_bar.selected_index
+        screen = get_screen(index)
+        content_area.content = screen
+        if hasattr(screen, '_refresh'):
+            page.run_task(screen._refresh)
+        page.update()
+
+    nav_bar = ft.NavigationBar(
+        destinations=[
+            ft.NavigationBarDestination(icon=ft.Icons.MAP, label="Planificador"),
+            ft.NavigationBarDestination(icon=ft.Icons.CREDIT_CARD, label="Billetera"),
+            ft.NavigationBarDestination(icon=ft.Icons.BUS_ALERT, label="Explorar"),
+            ft.NavigationBarDestination(icon=ft.Icons.WARNING, label="Alertas"),
+            ft.NavigationBarDestination(icon=ft.Icons.PERSON, label="Perfil"),
+        ],
+        on_change=on_tab_change,
+        selected_index=0,
+    )
+
+    content_area.content = get_screen(0)
+
+    return ft.Column(
+        [nav_bar, content_area],
+        expand=True,
+        spacing=0,
+    )
+
+
+def show_login(page: ft.Page):
+    page.controls.clear()
+    page.controls.append(_build_login_view(page))
+    page.update()
+
+
+def show_register(page: ft.Page):
+    page.controls.clear()
+    page.controls.append(_build_register_view(page))
+    page.update()
+
+
+def show_main(page: ft.Page):
+    page.controls.clear()
+    page.controls.append(_build_main_view(page))
+    page.update()
+
+
 class AppRouter:
     def __init__(self, page: ft.Page):
         self.page = page
 
-    def build(self):
-        if not auth_store.is_authenticated:
-            return self.build_screen("login")
-
-        return self.build_screen("main")
-
-    def build_screen(self, name: str):
-        if name == "login":
-            return ft.View(
-                "/login",
-                [LoginScreen(self.page)],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                vertical_alignment=ft.MainAxisAlignment.CENTER,
-            )
-
-        if name == "register":
-            return ft.View(
-                "/register",
-                [RegisterScreen(self.page)],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                vertical_alignment=ft.MainAxisAlignment.CENTER,
-            )
-
-        return ft.View(
-            "/",
-            [
-                ft.NavigationBar(
-                    destinations=[
-                        ft.NavigationBarDestination(icon=ft.Icons.MAP, text="Planificador"),
-                        ft.NavigationBarDestination(icon=ft.Icons.CREDIT_CARD, text="Billetera"),
-                        ft.NavigationBarDestination(icon=ft.Icons.BUS_ALERT, text="Explorar"),
-                        ft.NavigationBarDestination(icon=ft.Icons.WARNING, text="Alertas"),
-                        ft.NavigationBarDestination(icon=ft.Icons.PERSON, text="Perfil"),
-                    ],
-                    on_change=lambda e: self._on_tab_change(e.control.selected_index),
-                    selected_index=0,
-                    bgcolor=ft.Colors.WHITE,
-                    indicator_color=ft.Colors.GREEN_500,
-                ),
-                ft.Container(
-                    content=PlannerScreen(self.page),
-                    expand=True,
-                ),
-            ],
-            padding=0,
-        )
-
-    def _on_tab_change(self, index: int):
-        screens = [
-            PlannerScreen(self.page),
-            WalletScreen(self.page),
-            ExploreScreen(self.page),
-            AlertsScreen(self.page),
-            ProfileScreen(self.page),
-        ]
-        self.page.views.clear()
-        self.page.views.append(
-            ft.View(
-                "/",
-                [
-                    ft.NavigationBar(
-                        destinations=[
-                            ft.NavigationBarDestination(icon=ft.Icons.MAP, text="Planificador"),
-                            ft.NavigationBarDestination(icon=ft.Icons.CREDIT_CARD, text="Billetera"),
-                            ft.NavigationBarDestination(icon=ft.Icons.BUS_ALERT, text="Explorar"),
-                            ft.NavigationBarDestination(icon=ft.Icons.WARNING, text="Alertas"),
-                            ft.NavigationBarDestination(icon=ft.Icons.PERSON, text="Perfil"),
-                        ],
-                        on_change=lambda e: self._on_tab_change(e.control.selected_index),
-                        selected_index=index,
-                    ),
-                    ft.Container(content=screens[index], expand=True),
-                ],
-                padding=0,
-            )
-        )
-        self.page.update()
-
     def go_login(self):
-        self.page.views.clear()
-        self.page.views.append(self.build_screen("login"))
-        self.page.update()
+        show_login(self.page)
+
+    def go_register(self):
+        show_register(self.page)
+
+    def go_main(self):
+        show_main(self.page)

@@ -46,6 +46,6 @@ def decode_jwt(token: str) -> dict:
         role = data.get("role") or data.get(
             "http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "User"
         )
-        return {"id": data.get("sub"), "cui": data.get("cui"), "role": role}
+        return {"id": data.get("sub"), "cui": data.get("cui"), "role": role, "exp": data.get("exp")}
     except Exception:
         return {}

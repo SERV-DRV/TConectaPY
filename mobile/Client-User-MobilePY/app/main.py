@@ -10,14 +10,14 @@ def main(page: ft.Page):
     except Exception:
         pass
 
+    from app.stores.auth_store import auth_store
     try:
-        from app.stores.auth_store import auth_store
         auth_store.init_auth()
     except Exception as ex:
         print(f"[MAIN] init_auth error: {ex}")
 
+    from app.navigation import show_login, show_main
     try:
-        from app.navigation import show_login, show_main
         if auth_store.is_authenticated:
             show_main(page)
         else:
@@ -25,7 +25,6 @@ def main(page: ft.Page):
     except Exception as ex:
         print(f"[MAIN] navigation error: {ex}")
         try:
-            from app.navigation import show_login
             show_login(page)
         except Exception as ex2:
             print(f"[MAIN] fallback login error: {ex2}")
