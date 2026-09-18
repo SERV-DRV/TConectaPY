@@ -4,8 +4,8 @@ version = "1.0.0"
 description = "Tconecta Ciudadano Mobile - Python/Flet"
 requires-python = ">=3.11"
 dependencies = [
-    "flet>=0.25.0",
-    "flet-map>=0.25.0",
+    "flet==0.86.5",
+    "flet-map==0.86.5",
     "httpx>=0.28.0",
     "python-jose[cryptography]>=3.3.0",
 ]
