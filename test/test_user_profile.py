@@ -16,7 +16,7 @@ def test_user_profile_edit_email(login_user: Page):
     login_user.get_by_role("button", name="Datos del Usuario").click()
 
     # Verificar email visible
-    expect(login_user.get_by_text("usuario@gmail.com")).to_be_visible()
+    expect(login_user.get_by_text("usuario@correo.com")).to_be_visible()
 
 def test_user_profile_switch_tabs(login_user: Page):
     login_user.goto(f"{USER_URL}/profile")
