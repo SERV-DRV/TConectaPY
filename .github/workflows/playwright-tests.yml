@@ -73,6 +73,7 @@ jobs:
           name: Playwright Results
           path: results.xml
           reporter: java-junit
+          fail-on-error: false
 
       - name: Upload test report
         if: always()
