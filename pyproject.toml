@@ -6,6 +6,7 @@ dependencies = [
     "playwright>=1.48.0",
     "pytest>=8.0.0",
     "pytest-html>=4.1.0",
+    "pytest-playwright>=0.6.0",
 ]
 
 [build-system]
