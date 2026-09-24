@@ -30,3 +30,7 @@ node_modules/
 
 # Logs
 *.log
+
+# Playwright
+test-results/
+report.html

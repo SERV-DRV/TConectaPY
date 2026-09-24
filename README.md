@@ -6,29 +6,29 @@ Sistema completo de gestión de transporte público para la municipalidad. Inclu
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        CLIENTES                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐    │
+│                        CLIENTES                                 │
+│  ┌───────────────┐  ┌──────────────┐  ┌────────────────────┐    │
 │  │ Web Ciudadano │  │ Web Admin    │  │ App Móvil (APK)    │    │
 │  │ (Flet/Jinja2) │  │ (Flet/Jinja2)│  │ (Flet → Flutter)   │    │
 │  │   :5174       │  │   :5173      │  │  Android 5.0+      │    │
-│  └──────┬───────┘  └──────┬───────┘  └────────┬───────────┘    │
-│         │                 │                    │                 │
-├─────────┼─────────────────┼────────────────────┼─────────────────┤
-│         ▼                 ▼                    ▼                 │
-│                    MICROSERVICIOS                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │ Auth Server   │  │ Admin Server │  │ Client Server      │    │
-│  │ (FastAPI)     │  │ (FastAPI)    │  │ (FastAPI)          │    │
-│  │   :8080       │  │   :3001      │  │   :3002            │    │
-│  │ PostgreSQL    │  │ MongoDB      │  │ MongoDB            │    │
-│  │ MongoDB       │  │ Transmetro   │  │ Transmetro         │    │
-│  └──────┬───────┘  │ AdminDb      │  │ UserDb             │    │
-│         │          └──────────────┘  └────────────────────┘    │
+│  └──────┬────────┘  └──────┬───────┘  └────────┬───────────┘    │
+│         │                 │                    │                │
+├─────────┼─────────────────┼────────────────────┼────────────────┤
+│         ▼                 ▼                    ▼                │
+│                    MICROSERVICIOS                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐     │
+│  │ Auth Server  │  │ Admin Server │  │ Client Server      │     │
+│  │ (FastAPI)    │  │ (FastAPI)    │  │ (FastAPI)          │     │
+│  │   :8080      │  │   :3001      │  │   :3002            │     │
+│  │ PostgreSQL   │  │ MongoDB      │  │ MongoDB            │     │
+│  │ MongoDB      │  │ Transmetro   │  │ Transmetro         │     │
+│  └──────┬───────┘  │ AdminDb      │  │ UserDb             │     │
+│         │          └──────────────┘  └────────────────────┘     │
 │         ▼                                                       │
-│  ┌──────────────────┐                                          │
-│  │ PostgreSQL 16    │                                          │
-│  │ TransmetroAuthDb │                                          │
-│  └──────────────────┘                                          │
+│  ┌──────────────────┐                                           │
+│  │ PostgreSQL 16    │                                           │
+│  │ TransmetroAuthDb │                                           │
+│  └──────────────────┘                                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -842,7 +842,7 @@ android.archs = arm64-v8a
 
 ## CI/CD — GitHub Actions
 
-Archivo: `.github/workflows/build.yml`
+Archivo: `.github/workflows/playwright-tests.yml`
 
 **Triggers**:
 - Push a `main` o `develop`
@@ -898,7 +898,7 @@ En producción, usa automáticamente las URLs de Render.
 
 ```
 TConectaPY/
-├── .github/workflows/build.yml    # CI/CD para APK
+├── .github/workflows/playwright-tests.yml    # CI/CD para APK
 ├── README.md                       # Este archivo
 ├── spec_trasladoaPython.md         # Especificación de migración
 │
@@ -980,6 +980,84 @@ TConectaPY/
 
 ---
 
+## Testing — Playwright E2E
+
+### Requisitos
+
+```bash
+pip install playwright pytest pytest-html
+playwright install chromium
+```
+
+### Estructura de tests
+
+```
+test/
+├── conftest.py                 # Fixtures (login_admin, login_user) con retry
+├── test_admin_login.py         # Login administrador
+├── test_admin_dashboard.py     # Dashboard stats
+├── test_admin_buses.py         # CRUD buses (create + edit + status)
+├── test_admin_roads.py         # CRUD rutas (status + edit modal + create modal)
+├── test_admin_stations.py      # CRUD estaciones (status + edit modal + create modal)
+├── test_admin_alerts.py        # CRUD alertas (create + resolve)
+├── test_admin_users.py         # Crear admin
+├── test_user_login.py          # Login ciudadano
+├── test_user_planner.py        # Planificador (mapa + inputs + historial)
+├── test_user_wallet.py         # Billetera (recarga + compra tarjeta + historial)
+├── test_user_explore.py        # Explorar rutas/estaciones
+├── test_user_alerts.py         # Ver alertas
+└── test_user_profile.py        # Perfil (ver + tabs)
+```
+
+### Comandos
+
+```bash
+# Correr todos los tests
+pytest test/ -v
+
+# Ver el navegador ejecutando los tests
+pytest test/ -v --headed
+
+# Generar reporte HTML
+pytest test/ -v --html=report.html
+
+# Correr un test específico
+pytest test/test_admin_buses.py -v
+
+# Parar en el primer error
+pytest test/ -v -x
+
+# Correr solo tests de admin
+pytest test/ -v -k "admin"
+
+# Correr solo tests de user
+pytest test/ -v -k "user"
+```
+
+### Credenciales de test
+
+| CUI | Contraseña | Rol | Páginas |
+|-----|------------|-----|---------|
+| `1000000000001` | `Admin123!` | Admin | Dashboard, Roads, Stations, Buses, Alerts, Users |
+| `2000000000002` | `Usuario123!` | User | Planner, Wallet, Explore, Alerts, Profile |
+
+### Screenshots y Videos
+
+Los tests generan automáticamente screenshots y videos cuando fallan (configurado en `pyproject.toml`):
+
+```toml
+[tool.pytest.ini_options]
+addopts = "--screenshot=only-on-failure --video=retain-on-failure --output=test-results"
+```
+
+Los archivos se guardan en `test-results/` (excluido del `.gitignore`).
+
+### Rate Limiting
+
+El auth server tiene rate limiting (429 Too Many Requests). El fixture `conftest.py` incluye un retry automático (3 intentos con 5 segundos de espera) para manejar esto.
+
+---
+
 ## Licencia
 
-Proyecto privado — Municipalidad / IN6CM.
+Proyecto Privado.

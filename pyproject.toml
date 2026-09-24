@@ -1,0 +1,16 @@
+[project]
+name = "tconecta"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.48.0",
+    "pytest>=8.0.0",
+    "pytest-html>=4.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = "--screenshot=only-on-failure --video=retain-on-failure --output=test-results"
