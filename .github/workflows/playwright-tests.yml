@@ -62,9 +62,17 @@ jobs:
           playwright install chromium --with-deps
 
       - name: Run Playwright tests
-        run: pytest test/ -v --html=report.html --self-contained-html
+        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml
         env:
           CI: true
+
+      - name: Test Report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Playwright Results
+          path: results.xml
+          reporter: java-junit
 
       - name: Upload test report
         if: always()
