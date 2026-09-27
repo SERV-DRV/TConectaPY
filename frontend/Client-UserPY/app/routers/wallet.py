@@ -2,8 +2,9 @@ from fastapi import APIRouter, Request, Form, Query, HTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from app.api_client import auth_request, client_request
+from app.api_client import auth_request, client_request, get_invoice, get_invoices
 from app.main import require_auth
+from datetime import datetime
 import math
 
 router = APIRouter()
@@ -22,6 +23,43 @@ async def get_balance_api(request: Request):
     except Exception:
         return {"balance": 0.0}
 
+
+@router.get("/{invoice_id}")
+async def invoice_detail(request: Request, invoice_id: str):
+    user = await require_auth(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    token = request.session.get("token")
+    try:
+        invoice = await get_invoice(invoice_id, token)
+        if not invoice:
+            raise HTTPException(404, "Factura no encontrada")
+    except Exception:
+        raise HTTPException(404, "Factura no encontrada")
+
+    # Parsear fecha para template
+    fecha = datetime.fromisoformat(invoice["fecha"].replace("Z", "+00:00"))
+
+    return templates.TemplateResponse(request, "wallet/invoice_detail.html", {
+        "user": user,
+        "invoice": invoice,
+        "fecha_formateada": fecha.strftime("%d/%m/%Y %H:%M"),
+    })
+
+
+@router.get("/api/invoices")
+async def get_invoices_api(request: Request, page: int = Query(1)):
+    user = await require_auth(request)
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(401, "Unauthorized")
+    token = request.session.get("token")
+    try:
+        data = await get_invoices(page=page, limit=10, token=token)
+        return data
+    except Exception:
+        return {"invoices": [], "total": 0, "page": 1, "limit": 10, "totalPages": 1}
+
+
 @router.get("")
 async def wallet_page(request: Request, tab: str = Query("recharge"), page: int = Query(1)):
     user = await require_auth(request)
@@ -30,6 +68,7 @@ async def wallet_page(request: Request, tab: str = Query("recharge"), page: int 
     token = request.session.get("token")
     balance = 0.0
     history = []
+    invoices = []
     total_pages = 1
     try:
         bal_data = await client_request("GET", "/wallets/balance", token=token)
@@ -52,11 +91,19 @@ async def wallet_page(request: Request, tab: str = Query("recharge"), page: int 
                 history = hist_data
         except Exception as e:
             print("Error fetching history:", e)
+    elif tab == "invoices":
+        try:
+            inv_data = await get_invoices(page=page, limit=10, token=token)
+            if isinstance(inv_data, dict) and "invoices" in inv_data:
+                invoices = inv_data["invoices"]
+                total_pages = inv_data.get("totalPages", 1)
+        except Exception as e:
+            print("Error fetching invoices:", e)
     cui_last4 = str(user.get('cui', '000000000000'))[-4:] if user.get('cui') else '0000'
     expiry_date = '12/28'
     return templates.TemplateResponse(request, "wallet/index.html", {
         "user": user, "balance": balance,
-        "tab": tab, "history": history, "page": page, "total_pages": total_pages,
+        "tab": tab, "history": history, "invoices": invoices, "page": page, "total_pages": total_pages,
         "balance_last4": cui_last4, "expiry_date": expiry_date,
     })
 
@@ -69,9 +116,13 @@ async def recharge(request: Request, amount: float = Form(...), cardNumber: str 
         return user
     token = request.session.get("token")
     try:
-        await auth_request("POST", "/transaction/recharge", token=token, json={
+        result = await auth_request("POST", "/transaction/recharge", token=token, json={
             "cardNumber": cardNumber, "expirationDate": expirationDate, "cvv": cvv, "amount": amount,
         })
+        # Redirect to invoice detail if successful
+        if result.get("isSuccess") and result.get("invoiceId"):
+            request.session["toast_msg"] = f"Recarga exitosa de Q{amount}"
+            return RedirectResponse(f"/wallet/{result['invoiceId']}", status_code=302)
         request.session["toast_msg"] = f"Recarga exitosa de Q{amount}"
     except Exception as e:
         print(f"Error recharge: {e}")
@@ -87,9 +138,16 @@ async def purchase_card(request: Request, cardNumber: str = Form(...),
         return user
     token = request.session.get("token")
     try:
-        await auth_request("POST", "/transaction/purchase-card", token=token, json={
+        result = await auth_request("POST", "/transaction/purchase-card", token=token, json={
             "cardNumber": cardNumber, "expirationDate": expirationDate, "cvv": cvv, "amount": 20.00,
         })
+        # Redirect to invoice detail if successful
+        if result.get("isSuccess") and result.get("invoiceId"):
+            request.session["toast_msg"] = "Tarjeta ciudadana comprada con exito"
+            return RedirectResponse(f"/wallet/{result['invoiceId']}", status_code=302)
+        # If user already has card, show error but stay on page
+        if not result.get("isSuccess"):
+            request.session["toast_error"] = result.get("message", "Error al comprar tarjeta")
         request.session["toast_msg"] = "Tarjeta ciudadana comprada con exito"
     except Exception as e:
         print(f"Error purchase: {e}")

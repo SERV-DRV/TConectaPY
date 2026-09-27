@@ -65,18 +65,21 @@
 
     <!-- Form Card -->
     <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-        <!-- Tabs Header -->
-        <div class="flex border-b border-gray-100">
-            <a href="/wallet?tab=recharge" class="flex-1 py-4 font-bold text-sm transition-colors text-center {% if tab == 'recharge' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
-                Recargar Saldo Virtual
-            </a>
-            <a href="/wallet?tab=purchase" class="flex-1 py-4 font-bold text-sm transition-colors text-center {% if tab == 'purchase' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
-                Adquirir Tarjeta Ciudadana (Q20.00)
-            </a>
-            <a href="/wallet?tab=history" class="flex-1 py-4 font-bold text-sm transition-colors text-center flex items-center justify-center gap-1 {% if tab == 'history' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
-                Historial
-            </a>
-        </div>
+<!-- Tabs Header -->
+    <div class="flex border-b border-gray-100">
+        <a href="/wallet?tab=recharge" class="flex-1 py-4 font-bold text-sm transition-colors text-center {% if tab == 'recharge' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+            Recargar Saldo Virtual
+        </a>
+        <a href="/wallet?tab=purchase" class="flex-1 py-4 font-bold text-sm transition-colors text-center {% if tab == 'purchase' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+            Adquirir Tarjeta Ciudadana (Q20.00)
+        </a>
+        <a href="/wallet?tab=history" class="flex-1 py-4 font-bold text-sm transition-colors text-center flex items-center justify-center gap-1 {% if tab == 'history' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+            Historial
+        </a>
+        <a href="/wallet?tab=invoices" class="flex-1 py-4 font-bold text-sm transition-colors text-center flex items-center justify-center gap-1 {% if tab == 'invoices' %}border-b-2 border-[#46bf00] text-[#1801a9] bg-[#46bf00]/10{% else %}text-gray-500 hover:text-[#1801a9]{% endif %}">
+            Facturas
+        </a>
+    </div>
 
         <!-- Tab Body -->
         <div class="p-6 md:p-8">
@@ -168,6 +171,51 @@
                     {% if page > 1 %}<a href="/wallet?tab=history&page={{ page-1 }}" class="px-4 py-2 rounded-lg border text-sm font-bold text-gray-600 hover:bg-gray-50">Anterior</a>{% endif %}
                     <span class="px-4 py-2 text-sm font-bold text-[#1801a9] bg-gray-50 rounded-lg">Página {{ page }} de {{ total_pages }}</span>
                     {% if page < total_pages %}<a href="/wallet?tab=history&page={{ page+1 }}" class="px-4 py-2 rounded-lg border text-sm font-bold text-gray-600 hover:bg-gray-50">Siguiente</a>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            {% elif tab == "invoices" %}
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold text-[#1801a9] mb-4">Facturas Emitidas</h2>
+                {% if not invoices %}
+                <div class="text-center py-10 text-gray-400">
+                    <p class="text-sm font-medium">No hay facturas emitidas</p>
+                    <p class="text-xs mt-1">Tus facturas aparecerán aquí tras cada recarga o compra</p>
+                </div>
+                {% else %}
+                <div class="space-y-2 max-w-lg mx-auto">
+                    {% for inv in invoices %}
+                    <a href="/wallet/{{ inv._id }}" class="block p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
+<div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 {% if inv.tipo == 'RECARGA' %}bg-[#46bf00]/10 text-[#46bf00]{% else %}bg-[#1801a9]/10 text-[#1801a9]{% endif %} rounded-full flex items-center justify-center font-bold text-sm">
+                                        {% if inv.tipo == 'RECARGA' %}Q{% else %}🎫{% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-sm text-gray-900">
+                                            {% if inv.tipo == 'RECARGA' %}Recarga de Saldo{% else %}Compra Tarjeta Ciudadana{% endif %}
+                                        </p>
+                                        <p class="text-xs text-gray-500">{{ inv.fecha[:10] }} • Tarjeta •••• {{ inv.tarjetaUltimos4 }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 text-xs font-semibold text-emerald-800 bg-emerald-100 rounded-full">
+                                        {{ inv.status }}
+                                    </span>
+                                    <span class="px-2 py-0.5 text-xs font-semibold text-emerald-800 bg-emerald-100 rounded-full">
+                                        Q{{ "%.2f"|format(inv.monto) }}
+                                    </span>
+                                </div>
+                            </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                <!-- Paginación igual que historial -->
+                <div class="flex justify-center gap-2 mt-6">
+                    {% if page > 1 %}<a href="/wallet?tab=invoices&page={{ page-1 }}" class="px-4 py-2 rounded-lg border text-sm font-bold text-gray-600 hover:bg-gray-50">Anterior</a>{% endif %}
+                    <span class="px-4 py-2 text-sm font-bold text-[#1801a9] bg-gray-50 rounded-lg">Página {{ page }} de {{ total_pages }}</span>
+                    {% if page < total_pages %}<a href="/wallet?tab=invoices&page={{ page+1 }}" class="px-4 py-2 rounded-lg border text-sm font-bold text-gray-600 hover:bg-gray-50">Siguiente</a>{% endif %}
                 </div>
                 {% endif %}
             </div>

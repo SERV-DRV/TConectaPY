@@ -11,6 +11,29 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <style>
+        /* Estilos para impresión - ocultar navbar y elementos de navegación */
+        @media print {
+            nav, header, .navbar, #navbar, .sticky, .fixed, 
+            #mobile-menu-btn, #mobile-menu,
+            form[action="/auth/logout"] {
+                display: none !important;
+            }
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+            main {
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+            @page {
+                margin: 0;
+                size: auto;
+            }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased">
     {% if user %}

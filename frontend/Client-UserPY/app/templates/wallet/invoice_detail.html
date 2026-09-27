@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6 py-8 px-4">
+    <!-- Header con botón volver -->
+    <div class="flex items-center gap-4 print:hidden">
+        <a href="/wallet?tab=invoices" class="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        </a>
+        <div>
+            <h1 class="text-2xl font-black text-[#1801a9]">Factura</h1>
+            <p class="text-sm text-gray-500">{{ fecha_formateada }}</p>
+        </div>
+    </div>
+
+    <!-- Card Factura -->
+    <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-[#1801a9] to-indigo-900 text-white p-6">
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-[#46bf00]">
+                        {% if invoice.tipo == "RECARGA" %}RECARGA DE SALDO{% else %}COMPRA TARJETA CIUDADANA{% endif %}
+                    </span>
+                    <p class="text-sm text-blue-100 mt-1">T-Conecta • Transmetro Conecta</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-3xl font-black">Q{{ "%.2f"|format(invoice.monto) }}</p>
+                    <p class="text-xs text-blue-200">Monto Total</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-5">
+            <!-- Info Transacción -->
+            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <h3 class="text-xs font-bold text-[#1801a9] uppercase tracking-wider mb-3">Detalle de Transacción</h3>
+                <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Fecha y Hora</dt>
+                        <dd class="font-bold text-gray-900">{{ fecha_formateada }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Estado</dt>
+                        <dd class="px-2 py-0.5 text-xs font-semibold text-emerald-800 bg-emerald-100 rounded-full">{{ invoice.status }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Info Usuario -->
+            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <h3 class="text-xs font-bold text-[#1801a9] uppercase tracking-wider mb-3">Datos del Usuario</h3>
+                <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">CUI / DPI</dt>
+                        <dd class="font-mono font-bold text-gray-900">{{ invoice.cuiUsuario }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-500">Tarjeta</dt>
+                        <dd class="font-mono font-bold text-gray-900">•••• {{ invoice.tarjetaUltimos4 }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Acciones (solo en pantalla, no en impresión) -->
+            <div class="flex gap-3 pt-4 border-t border-gray-100 print:hidden">
+                <button onclick="window.print()" class="flex-1 bg-[#1801a9] hover:opacity-90 text-white font-bold py-3 rounded-xl transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Imprimir / Guardar PDF
+                </button>
+                <a href="/wallet?tab=invoices" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all text-center">
+                    Volver al Listado
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer legal (visible en impresión) -->
+    <div class="text-center text-xs text-gray-400 print:block">
+        <p>Esta factura es un comprobante digital emitido por T-Conecta.</p>
+        <p>Municipalidad de Guatemala • Sistema Transmetro Conecta</p>
+    </div>
+</div>
+
+<style>
+/* Estilos solo para impresión */
+@media print {
+    /* Ocultar navbar y elementos de navegación del base.html */
+    nav, header, .navbar, #navbar, .fixed, .sticky {
+        display: none !important;
+    }
+    
+    /* Ocultar botones de acción */
+    .print\:hidden {
+        display: none !important;
+    }
+    
+    /* Quitar márgenes y padding del body para impresión limpia */
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+    
+    /* Asegurar que la factura ocupe toda la página */
+    .max-w-2xl {
+        max-width: 100% !important;
+    }
+    
+    /* Ocultar URL que añade el navegador en header/footer de impresión */
+    @page {
+        margin: 0;
+        size: auto;
+    }
+    
+    /* Evitar cortes de página en medio de elementos */
+    .bg-white, .bg-gray-50 {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
