@@ -34,3 +34,6 @@ node_modules/
 # Playwright
 test-results/
 report.html
+
+#Oh My Open Code
+.omo

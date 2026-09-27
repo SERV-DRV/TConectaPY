@@ -11,12 +11,32 @@ def test_user_profile_view(login_user: Page):
 
 def test_user_profile_edit_email(login_user: Page):
     login_user.goto(f"{USER_URL}/profile")
-
-    # Click en tab datos del usuario
     login_user.get_by_role("button", name="Datos del Usuario").click()
 
-    # Verificar email visible
-    expect(login_user.get_by_text("usuario@gmail.com")).to_be_visible()
+    # Leer email actual del texto visible
+    email_locator = login_user.get_by_text("usuario@correo.com")
+    if email_locator.count() == 0:
+        email_locator = login_user.get_by_text("usuario@gmail.com")
+    
+    current_email = email_locator.first.text_content()
+    new_email = "usuario@gmail.com" if current_email == "usuario@correo.com" else "usuario@correo.com"
+
+    # Click en icono editar (botón dentro de #email-display)
+    login_user.locator("#email-display button").click()
+
+    # Editar email en el input del formulario
+    login_user.locator("input[name='newEmail']").fill(new_email)
+
+    # Click guardar (botón submit del form) y esperar navegación
+    with login_user.expect_navigation():
+        login_user.get_by_role("button", name="Guardar").click()
+
+    # Tras redirect, la pestaña "Datos del Usuario" se desactiva -> reactivarla
+    login_user.get_by_role("button", name="Datos del Usuario").click()
+
+    # Verificar nuevo email visible
+    expect(login_user.locator("#email-display")).to_be_visible()
+    expect(login_user.get_by_text(new_email)).to_be_visible()
 
 def test_user_profile_switch_tabs(login_user: Page):
     login_user.goto(f"{USER_URL}/profile")
