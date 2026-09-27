@@ -36,19 +36,20 @@ def test_invoice_created_after_recharge(login_user: Page):
     # Verificar URL: /wallet/[mongo_id] (ObjectId de 24 hex chars)
     expect(login_user).to_have_url(re.compile(r"/wallet/[a-f0-9]{24}$"), timeout=10000)
 
-    # Verificar contenido factura detalle
-    expect(login_user.get_by_role("heading", name="Factura")).to_be_visible()
-    expect(login_user.get_by_text("RECARGA DE SALDO")).to_be_visible()
-    expect(login_user.get_by_text("Q10.00")).to_be_visible()
-    expect(login_user.get_by_text("COMPLETADA")).to_be_visible()
+    # Verificar contenido factura detalle (usar main para evitar match con navbar balance)
+    main = login_user.locator("main")
+    expect(main.get_by_role("heading", name="Factura")).to_be_visible()
+    expect(main.get_by_text("RECARGA DE SALDO")).to_be_visible()
+    expect(main.get_by_text("Q10.00")).to_be_visible()
+    expect(main.get_by_text("COMPLETADA")).to_be_visible()
     # CUI del usuario de test (2000000000002)
-    expect(login_user.get_by_text("2000000000002")).to_be_visible()
+    expect(main.get_by_text("2000000000002")).to_be_visible()
     # Últimos 4 de tarjeta de test
-    expect(login_user.get_by_text("0366")).to_be_visible()
+    expect(main.get_by_text("0366")).to_be_visible()
 
     # Verificar botones de acción
-    expect(login_user.get_by_role("button", name=re.compile(r"Imprimir"))).to_be_visible()
-    expect(login_user.get_by_role("link", name="Volver al Listado")).to_be_visible()
+    expect(main.get_by_role("button", name=re.compile(r"Imprimir"))).to_be_visible()
+    expect(main.get_by_role("link", name="Volver al Listado")).to_be_visible()
 
 
 # ──────────────────────────────────────────────
@@ -76,10 +77,11 @@ def test_invoice_created_after_purchase_card(login_user: Page):
     if "/wallet/" in login_user.url and re.search(r"/wallet/[a-f0-9]{24}$", login_user.url):
         # Éxito: verificamos factura COMPRA_TARJETA
         expect(login_user).to_have_url(re.compile(r"/wallet/[a-f0-9]{24}$"), timeout=10000)
-        expect(login_user.get_by_text("COMPRA TARJETA CIUDADANA")).to_be_visible()
-        expect(login_user.get_by_text("Q20.00")).to_be_visible()
-        expect(login_user.get_by_text("2000000000002")).to_be_visible()
-        expect(login_user.get_by_text("0366")).to_be_visible()
+        main = login_user.locator("main")
+        expect(main.get_by_text("COMPRA TARJETA CIUDADANA")).to_be_visible()
+        expect(main.get_by_text("Q20.00")).to_be_visible()
+        expect(main.get_by_text("2000000000002")).to_be_visible()
+        expect(main.get_by_text("0366")).to_be_visible()
     else:
         # Usuario ya tiene tarjeta - verificar que sigue en purchase y hay error visible
         expect(login_user).to_have_url(re.compile(r"/wallet\?tab=purchase"))
@@ -170,7 +172,8 @@ def test_invoice_list_to_detail_navigation(login_user: Page):
 
     # Verificar detalle
     expect(login_user).to_have_url(re.compile(rf"/wallet/{invoice_id}$"))
-    expect(login_user.get_by_text("RECARGA DE SALDO")).to_be_visible()
+    main = login_user.locator("main")
+    expect(main.get_by_text("RECARGA DE SALDO")).to_be_visible()
 
     # 4. Volver al listado
     with login_user.expect_navigation():
@@ -219,7 +222,8 @@ def test_invoice_ownership_isolation(browser, login_user: Page):
     # Backend debe retornar 404 (ownership check en get_invoice_by_id)
     # En SSR FastAPI, 404 renderiza página de error o redirige
     # Verificar que NO ve la factura del usuario
-    expect(admin_page.get_by_text("RECARGA DE SALDO")).not_to_be_visible()
+    admin_main = admin_page.locator("main")
+    expect(admin_main.get_by_text("RECARGA DE SALDO")).not_to_be_visible()
     # O verificar redirect a wallet sin factura
     expect(admin_page).to_have_url(re.compile(r"/wallet"))
     
@@ -246,13 +250,14 @@ def test_invoice_detail_responsive_mobile(login_user: Page):
     login_user.set_viewport_size({"width": 375, "height": 667})
 
     # Verificar que elementos clave siguen visibles y legibles
-    expect(login_user.get_by_role("heading", name="Factura")).to_be_visible()
-    expect(login_user.get_by_text("Q10.00")).to_be_visible()
-    expect(login_user.get_by_text("COMPLETADA")).to_be_visible()
+    main = login_user.locator("main")
+    expect(main.get_by_role("heading", name="Factura")).to_be_visible()
+    expect(main.get_by_text("Q10.00")).to_be_visible()
+    expect(main.get_by_text("COMPLETADA")).to_be_visible()
 
     # Botones apilados en móvil (flex-col en <640px)
-    print_btn = login_user.get_by_role("button", name=re.compile(r"Imprimir"))
-    back_link = login_user.get_by_role("link", name="Volver al Listado")
+    print_btn = main.get_by_role("button", name=re.compile(r"Imprimir"))
+    back_link = main.get_by_role("link", name="Volver al Listado")
     expect(print_btn).to_be_visible()
     expect(back_link).to_be_visible()
 
