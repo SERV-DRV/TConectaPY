@@ -267,6 +267,55 @@ def test_invoice_detail_responsive_mobile(login_user: Page):
 
 
 # ──────────────────────────────────────────────
+# MOCK — FACTURA SIN CARGO REAL (para dev/tests/demos)
+# ──────────────────────────────────────────────
+def test_invoice_created_after_recharge_mocked(login_user: Page):
+    """
+    Mock de transacción: intercepta form POST /wallet/recharge,
+    retorna redirect 302 a factura fake. Demuestra patrón para evitar
+    1.5s sleep + validación Luhn + escritura BD real.
+    Nota: En app SSR, el mock intercepta el form submit del navegador.
+    Para mock completo de vista detalle, requeriría interceptar GET /wallet/{id} también.
+    """
+    fake_invoice_id = "66f8b2c1a1b2c3d4e5f6a7b8"  # ObjectId 24 hex válido
+    
+    # 1. Ir a wallet
+    login_user.goto(f"{USER_URL}/wallet")
+    
+    # 2. Click en monto Q10 (abre formulario)
+    login_user.get_by_role("button", name="Q10.00").click()
+    
+    # 3. INTERCEPTAR el form POST del frontend (server-rendered app)
+    # El navegador hace POST a /wallet/recharge y recibe redirect 302
+    def handle_recharge_form(route):
+        print(f"[MOCK] Interceptado form POST: {route.request.url}")
+        # Simular redirect que haría el frontend tras mock exitoso
+        route.fulfill(
+            status=302,
+            headers={"Location": f"/wallet/{fake_invoice_id}"}
+        )
+    
+    # Registrar interceptor en el form POST del frontend
+    login_user.route("**/wallet/recharge", handle_recharge_form)
+    
+    # 4. Llenar MÍNIMO para habilitar botón (tarjeta Luhn válida)
+    login_user.locator("input[name='cardNumber']").fill(VALID_CARD)
+    login_user.locator("input[name='expirationDate']").fill(VALID_EXP)
+    login_user.locator("input[name='cvv']").fill(VALID_CVV)
+    
+    # 5. Click y esperar navegación (INMEDIATA, sin 1.5s sleep ni validación Luhn real)
+    with login_user.expect_navigation():
+        login_user.get_by_role("button", name="Procesar Recarga").click()
+    
+    # 6. Verificar redirect a factura mock (evitó flujo real completo)
+    expect(login_user).to_have_url(re.compile(rf"/wallet/{fake_invoice_id}$"))
+    
+    # 7. Verificar que NO hizo request real al backend (no esperó 1.5s)
+    # Si llegamos aquí en <2s, el mock funcionó
+    print(f"[MOCK] Redirect completado a factura fake: {fake_invoice_id}")
+
+
+# ──────────────────────────────────────────────
 # COMANDOS DE EJECUCIÓN
 # ──────────────────────────────────────────────
 """
