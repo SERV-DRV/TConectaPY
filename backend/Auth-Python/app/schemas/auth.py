@@ -132,6 +132,7 @@ class TransactionResponse(BaseAuthSchema):
     isSuccess: bool
     message: str
     transactionId: str
+    invoiceId: str | None = None
 
 
 # ── Error ───────────────────────────────────────────────

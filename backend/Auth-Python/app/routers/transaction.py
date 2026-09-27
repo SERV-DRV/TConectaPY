@@ -14,7 +14,7 @@ async def recharge(
     user: User = Depends(validate_jwt),
 ):
     result = await transaction_service.process_payment(
-        user.id, body.CardNumber, body.Amount
+        user.id, user.cui, body.CardNumber, body.Amount
     )
     return result
 
@@ -25,6 +25,6 @@ async def purchase_card(
     user: User = Depends(validate_jwt),
 ):
     result = await transaction_service.purchase_card(
-        user.id, body.CardNumber, body.Amount
+        user.id, user.cui, body.CardNumber, body.Amount
     )
     return result

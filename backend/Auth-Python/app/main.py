@@ -7,9 +7,19 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import close_db, init_db
-from app.database_mongo import connect_mongo, close_mongo
+from app.database_mongo import connect_mongo, close_mongo, get_mongo_db
 from app.models.seed import seed_database
 from app.routers import auth, transaction, wallet
+
+
+async def create_invoice_indexes():
+    """Create MongoDB indexes for invoices collection."""
+    try:
+        mongo_db = get_mongo_db()
+        await mongo_db.invoices.create_index([("userId", 1), ("fecha", -1)])
+        print("[TransmetroAuth] Índices de facturas creados/verificados")
+    except Exception as e:
+        print(f"[TransmetroAuth] Error creando índices de facturas: {e}")
 
 
 @asynccontextmanager
@@ -18,6 +28,7 @@ async def lifespan(app: FastAPI):
     print("[TransmetroAuth] Iniciando servidor...")
     await init_db()
     await connect_mongo()
+    await create_invoice_indexes()
     await seed_database()
     print(f"[TransmetroAuth] Servidor listo — puerto {settings.port}")
     yield
