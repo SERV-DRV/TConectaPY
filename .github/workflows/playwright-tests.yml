@@ -16,14 +16,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start Docker services (CI - solo servicios esenciales)
+      - name: Start Docker services (solo esenciales: postgres, mongo, auth)
         run: |
           cd backend/Auth-Python
-          docker compose -f docker-compose.ci.yml up -d
+          docker compose up -d postgres-db mongo-db auth-python
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
 
-      - name: Wait for services to be healthy
+      - name: Wait for Auth server
         run: |
           echo "Waiting for Auth server..."
           for i in $(seq 1 40); do
@@ -45,8 +45,8 @@ jobs:
           pip install playwright pytest pytest-html pytest-playwright
           playwright install chromium --with-deps
 
-      - name: Run Playwright tests
-        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel
+      - name: Run Playwright tests (solo tests que no requieren frontends)
+        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel -k "not integration"
         env:
           CI: true
 
@@ -79,6 +79,6 @@ jobs:
         if: always()
         run: |
           cd backend/Auth-Python
-          docker compose -f docker-compose.ci.yml down -v
+          docker compose down -v
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci

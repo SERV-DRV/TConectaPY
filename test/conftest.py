@@ -1,6 +1,7 @@
 import re
 import time
 import os
+import threading
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -9,30 +10,44 @@ USER_URL = "http://localhost:5174"
 
 # En CI (GitHub Actions) el rate limit es más agresivo
 IS_CI = os.getenv("CI", "false").lower() == "true"
-MAX_RETRIES = 10 if IS_CI else 3
-RETRY_DELAY = 15 if IS_CI else 5
+MAX_RETRIES = 12 if IS_CI else 3
+RETRY_DELAY = 20 if IS_CI else 5
+
+# Lock global para serializar logins en CI (rate limit 10 req/min compartido)
+_login_lock = threading.Lock()
+
 
 def _login(page, url, cui_placeholder, cui, password_selector, password, redirect_pattern):
-    for attempt in range(MAX_RETRIES):
-        page.goto(f"{url}/auth/login")
-        page.get_by_placeholder(cui_placeholder).fill(cui)
-        page.locator(password_selector).fill(password)
-        page.get_by_role("button", name="Iniciar sesion").click()
+    # Serializar logins en CI para evitar rate limit compartido
+    if IS_CI:
+        _login_lock.acquire()
+    
+    try:
+        for attempt in range(MAX_RETRIES):
+            page.goto(f"{url}/auth/login")
+            page.get_by_placeholder(cui_placeholder).fill(cui)
+            page.locator(password_selector).fill(password)
+            page.get_by_role("button", name="Iniciar sesion").click()
 
-        try:
-            expect(page).to_have_url(re.compile(redirect_pattern), timeout=15000)
-            return
-        except Exception:
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(RETRY_DELAY)
-            else:
-                raise
+            try:
+                expect(page).to_have_url(re.compile(redirect_pattern), timeout=15000)
+                return
+            except Exception:
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY)
+                else:
+                    raise
+    finally:
+        if IS_CI:
+            _login_lock.release()
+
 
 @pytest.fixture
 def login_admin(page: Page):
     _login(page, ADMIN_URL, "Ej: 0000000000000", "1000000000001",
            "input[name='password']", "Admin123!", r"/dashboard$")
     return page
+
 
 @pytest.fixture
 def login_user(page: Page):
