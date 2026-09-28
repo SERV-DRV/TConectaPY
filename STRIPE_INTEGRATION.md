@@ -39,7 +39,7 @@ STRIPE_INTEGRATION.md            # Este archivo
 # backend/Auth-Python/.env
 STRIPE_SECRET_KEY=sk_test_TU_SECRET_KEY_AQUI
 STRIPE_API_VERSION=2024-06-20
-STRIPE_WEBHOOK_SECRET=whsec_xxx  # Opcional, para webhooks
+STRIPE_WEBHOOK_SECRET=whsec_TU_WEBHOOK_SECRET_AQUI  # Opcional, para webhooks
 ```
 
 ### Frontend (Client-UserPY)

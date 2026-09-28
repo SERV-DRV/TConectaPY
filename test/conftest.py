@@ -1,12 +1,16 @@
 import re
 import time
+import os
 import pytest
 from playwright.sync_api import Page, expect
 
 ADMIN_URL = "http://localhost:5173"
 USER_URL = "http://localhost:5174"
-MAX_RETRIES = 3
-RETRY_DELAY = 5
+
+# En CI (GitHub Actions) el rate limit es más agresivo, aumentar reintentos
+IS_CI = os.getenv("CI", "false").lower() == "true"
+MAX_RETRIES = 8 if IS_CI else 3
+RETRY_DELAY = 10 if IS_CI else 5
 
 def _login(page, url, cui_placeholder, cui, password_selector, password, redirect_pattern):
     for attempt in range(MAX_RETRIES):
