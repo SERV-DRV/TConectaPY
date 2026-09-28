@@ -1,4 +1,13 @@
-# En CI (GitHub Actions) el rate limit es más agresivo, aumentar reintentos y delay
+import re
+import time
+import os
+import pytest
+from playwright.sync_api import Page, expect
+
+ADMIN_URL = "http://localhost:5173"
+USER_URL = "http://localhost:5174"
+
+# En CI (GitHub Actions) el rate limit es más agresivo
 IS_CI = os.getenv("CI", "false").lower() == "true"
 MAX_RETRIES = 10 if IS_CI else 3
 RETRY_DELAY = 15 if IS_CI else 5
@@ -11,7 +20,7 @@ def _login(page, url, cui_placeholder, cui, password_selector, password, redirec
         page.get_by_role("button", name="Iniciar sesion").click()
 
         try:
-            expect(page).to_have_url(re.compile(redirect_pattern), timeout=10000)
+            expect(page).to_have_url(re.compile(redirect_pattern), timeout=15000)
             return
         except Exception:
             if attempt < MAX_RETRIES - 1:

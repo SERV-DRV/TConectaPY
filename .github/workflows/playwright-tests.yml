@@ -10,45 +10,29 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start Docker services
+      - name: Start Docker services (CI - solo servicios esenciales)
         run: |
           cd backend/Auth-Python
-          docker compose up -d
+          docker compose -f docker-compose.ci.yml up -d
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
 
       - name: Wait for services to be healthy
         run: |
-          echo "Waiting for services..."
-          for i in $(seq 1 30); do
+          echo "Waiting for Auth server..."
+          for i in $(seq 1 40); do
             if curl -s http://localhost:8080/api/health > /dev/null 2>&1; then
               echo "Auth server ready"
               break
             fi
-            echo "Waiting... ($i/30)"
+            echo "Waiting... ($i/40)"
             sleep 5
-          done
-
-          for i in $(seq 1 20); do
-            if curl -s http://localhost:5173 > /dev/null 2>&1; then
-              echo "Client Admin ready"
-              break
-            fi
-            sleep 3
-          done
-
-          for i in $(seq 1 20); do
-            if curl -s http://localhost:5174 > /dev/null 2>&1; then
-              echo "Client User ready"
-              break
-            fi
-            sleep 3
           done
 
       - name: Set up Python
@@ -62,7 +46,7 @@ jobs:
           playwright install chromium --with-deps
 
       - name: Run Playwright tests
-        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel -n 0
+        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel
         env:
           CI: true
 
@@ -95,6 +79,6 @@ jobs:
         if: always()
         run: |
           cd backend/Auth-Python
-          docker compose down -v
+          docker compose -f docker-compose.ci.yml down -v
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
