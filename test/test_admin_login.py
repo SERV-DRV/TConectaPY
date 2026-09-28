@@ -1,7 +1,6 @@
-import pytest
-from playwright.sync_api import Page, expect
 import re
-@pytest.mark.integration
+from playwright.sync_api import Page, expect
+
 def test_admin_login(page: Page):
     page.goto("http://localhost:5173/auth/login")
 

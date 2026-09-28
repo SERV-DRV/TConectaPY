@@ -13,17 +13,17 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: "Checkout code"
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: "Start Docker services (solo esenciales: postgres, mongo, auth)"
+      - name: Start Docker services (solo esenciales: postgres, mongo, auth)
         run: |
           cd backend/Auth-Python
           docker compose up -d postgres-db mongo-db auth-python
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
 
-      - name: "Wait for Auth server"
+      - name: Wait for Auth server
         run: |
           echo "Waiting for Auth server..."
           for i in $(seq 1 40); do
@@ -35,22 +35,22 @@ jobs:
             sleep 5
           done
 
-      - name: "Set up Python"
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
 
-      - name: "Install dependencies"
+      - name: Install dependencies
         run: |
           pip install playwright pytest pytest-html pytest-playwright
           playwright install chromium --with-deps
 
-      - name: "Run Playwright tests (solo tests que no requieren frontends)"
-        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel -k "not integration"
+      - name: Run Playwright tests
+        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel
         env:
           CI: true
 
-      - name: "Test Report"
+      - name: Test Report
         if: always()
         uses: dorny/test-reporter@v1
         with:
@@ -59,7 +59,7 @@ jobs:
           reporter: java-junit
           fail-on-error: false
 
-      - name: "Upload test report"
+      - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -67,7 +67,7 @@ jobs:
           path: report.html
           retention-days: 14
 
-      - name: "Upload test results"
+      - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -75,7 +75,7 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      - name: "Stop Docker services"
+      - name: Stop Docker services
         if: always()
         run: |
           cd backend/Auth-Python
