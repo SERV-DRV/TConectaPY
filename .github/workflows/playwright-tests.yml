@@ -62,7 +62,7 @@ jobs:
           playwright install chromium --with-deps
 
       - name: Run Playwright tests
-        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml
+        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel -n 0
         env:
           CI: true
 
