@@ -16,14 +16,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start Docker services (solo esenciales: postgres, mongo, auth)
+      - name: "Start Docker services (solo esenciales: postgres, mongo, auth)"
         run: |
           cd backend/Auth-Python
           docker compose up -d postgres-db mongo-db auth-python
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
 
-      - name: Wait for Auth server
+      - name: "Wait for Auth server"
         run: |
           echo "Waiting for Auth server..."
           for i in $(seq 1 40); do
@@ -45,7 +45,7 @@ jobs:
           pip install playwright pytest pytest-html pytest-playwright
           playwright install chromium --with-deps
 
-      - name: Run Playwright tests
+      - name: "Run Playwright tests"
         run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml -p no:parallel
         env:
           CI: true
@@ -75,7 +75,7 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      - name: Stop Docker services
+      - name: "Stop Docker services"
         if: always()
         run: |
           cd backend/Auth-Python
