@@ -1,0 +1,401 @@
+{# 
+===================================================
+Stripe Elements Partial para Wallet
+===================================================
+
+Uso en wallet/index.html:
+    {% include "wallet/stripe_elements.html" %}
+
+Reemplaza el formulario actual de tarjeta (inputs cardNumber, expirationDate, cvv)
+por Stripe Elements (iframe seguro, PCI SAQ A).
+
+Flujo:
+1. Cargar Stripe.js con publishable key
+2. Crear elements y montar #card-element
+4. En submit: crear PaymentIntent → confirmCardPayment()
+5. Si éxito → redirect a factura
+6. Si error → mostrar mensaje Stripe
+
+Variables requeridas en .env:
+    STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+
+En config.py agregar:
+    STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+
+En main.py pasar a templates:
+    templates = Jinja2Templates(directory="app/templates", env=Environment(globals={"STRIPE_PUBLISHABLE_KEY": settings.STRIPE_PUBLISHABLE_KEY}))
+=================================================== #}
+
+<!-- Contenedor Stripe Elements (reemplaza inputs tarjeta) -->
+<div id="stripe-card-element" class="mb-4">
+    <!-- Stripe monta el iframe aquí -->
+</div>
+
+<!-- Mensajes de error Stripe -->
+<div id="stripe-error-message" class="text-red-600 text-sm mb-4 hidden" role="alert"></div>
+
+<!-- Botón submit Stripe -->
+<button 
+    type="button" 
+    id="stripe-submit-btn"
+    class="w-full bg-[#46bf00] hover:bg-[#3da300] text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled
+>
+    <span id="stripe-btn-text">Procesar Recarga</span>
+    <span id="stripe-btn-loading" class="hidden">
+        <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Procesando...
+    </span>
+</button>
+
+<script>
+/**
+ * Stripe Elements Integration para T-Conecta Wallet
+ * 
+ * Requiere en window:
+ * - STRIPE_PUBLISHABLE_KEY (desde template context)
+ * - ENDPOINTS: /api/stripe/create-payment-intent, /wallet/recharge
+ */
+(function() {
+    'use strict';
+    
+    // Configuración
+    const STRIPE_KEY = "{{ STRIPE_PUBLISHABLE_KEY|default('') }}";
+    const CREATE_INTENT_URL = "/api/stripe/create-payment-intent";
+    const RECHARGE_URL = "/wallet/recharge";  // Endpoint actual que crea factura
+    
+    // Estado
+    let stripe = null;
+    let cardElement = null;
+    let paymentIntentClientSecret = null;
+    let isProcessing = false;
+    
+    // Elementos DOM
+    const cardContainer = document.getElementById('stripe-card-element');
+    const errorEl = document.getElementById('stripe-error-message');
+    const submitBtn = document.getElementById('stripe-submit-btn');
+    const btnText = document.getElementById('stripe-btn-text');
+    const btnLoading = document.getElementById('stripe-btn-loading');
+    const amountInput = document.getElementById('amount');
+    
+    // Utilidades
+    function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.classList.remove('hidden');
+    }
+    
+    function hideError() {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+    }
+    
+    function setLoading(loading) {
+        isProcessing = loading;
+        submitBtn.disabled = loading;
+        if (loading) {
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+        } else {
+            btnText.classList.remove('hidden');
+            btnLoading.classList.add('hidden');
+        }
+    }
+    
+    function formatAmountForStripe(amount) {
+        // Stripe espera centavos: Q10.00 → 1000
+        return Math.round(parseFloat(amount) * 100);
+    }
+    
+    // ─── Inicialización Stripe ───
+    async function initStripe() {
+        if (!STRIPE_KEY) {
+            console.warn('[Stripe] STRIPE_PUBLISHABLE_KEY no configurada');
+            cardContainer.innerHTML = '<p class="text-red-600 text-sm">Stripe no configurado. Contacta al administrador.</p>';
+            return false;
+        }
+        
+        try {
+            // Cargar Stripe.js si no está cargado
+            if (typeof Stripe === 'undefined') {
+                await loadStripeJS();
+            }
+            
+            stripe = Stripe(STRIPE_KEY, {
+                apiVersion: '2024-06-20',
+                locale: 'es'
+            });
+            
+            const elements = stripe.elements({
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#1801a9',
+                        colorBackground: '#ffffff',
+                        colorText: '#1a1a2e',
+                        colorDanger: '#dc2626',
+                        fontFamily: 'system-ui, sans-serif',
+                        spacingUnit: '4px',
+                        borderRadius: '8px'
+                    },
+                    rules: {
+                        '.Input': {
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+                            padding: '12px',
+                        },
+                        '.Input:focus': {
+                            border: '2px solid #1801a9',
+                            boxShadow: '0 0 0 3px rgb(24 1 169 / 0.1)',
+                        },
+                        '.Label': {
+                            fontWeight: '600',
+                            marginBottom: '6px',
+                        }
+                    }
+                }
+            });
+            
+            cardElement = elements.create('card', {
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#1a1a2e',
+                        fontFamily: 'system-ui, sans-serif',
+                        '::placeholder': { color: '#9ca3af' }
+                    },
+                    invalid: { color: '#dc2626', iconColor: '#dc2626' }
+                },
+                hidePostalCode: true  // No pedir código postal
+            });
+            
+            cardElement.mount('#stripe-card-element');
+            
+            // Habilitar botón cuando tarjeta completa
+            cardElement.on('change', (event) => {
+                submitBtn.disabled = !event.complete || isProcessing;
+                if (event.error) {
+                    showError(event.error.message);
+                } else {
+                    hideError();
+                }
+            });
+            
+            // Focus handling
+            cardElement.on('focus', () => hideError());
+            cardElement.on('blur', () => {});
+            
+            console.log('[Stripe] Elements inicializado correctamente');
+            return true;
+            
+        } catch (err) {
+            console.error('[Stripe] Error inicializando:', err);
+            showError('Error inicializando pasarela de pago');
+            return false;
+        }
+    }
+    
+    function loadStripeJS() {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector('script[src*="js.stripe.com"]')) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'https://js.stripe.com/v3/';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('No se pudo cargar Stripe.js'));
+            document.head.appendChild(script);
+        });
+    }
+    
+    // ─── Crear PaymentIntent ───
+    async function createPaymentIntent(amount) {
+        hideError();
+        
+        try {
+            const response = await fetch('/api/stripe/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',  // Incluir cookies JWT
+                body: JSON.stringify({
+                    amount: formatAmountForStripe(amount),
+                    currency: 'gtq',
+                    metadata: {
+                        source: 'wallet_recharge'
+                    }
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail?.message || data.detail || 'Error creando intento de pago');
+            }
+            
+            return data.client_secret;
+            
+        } catch (err) {
+            console.error('[Stripe] Error creando PaymentIntent:', err);
+            throw err;
+        }
+    }
+    
+    // ─── Confirmar pago con Stripe.js ───
+    async function confirmPayment(clientSecret) {
+        const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: {
+                card: cardElement,
+                billing_details: {
+                    name: "{{ user.cui|default('Usuario') }}",  // CUI como nombre
+                    email: "{{ user.email|default('') }}"
+                }
+            }
+        });
+        
+        if (error) {
+            // Error de Stripe (tarjeta rechazada, etc.)
+            throw new Error(error.message);
+        }
+        
+        if (paymentIntent.status === 'succeeded') {
+            return paymentIntent;
+        }
+        
+        throw new Error('Pago no completado');
+    }
+    
+    // ─── Enviar a backend para crear factura ───
+    async function completeRecharge(amount, paymentIntentId) {
+        const formData = new FormData();
+        formData.append('amount', amount);
+        formData.append('cardNumber', 'stripe_payment');  // Marker para backend
+        formData.append('expirationDate', 'stripe');
+        formData.append('cvv', 'stripe');
+        formData.append('payment_intent_id', paymentIntentId);
+        
+        const response = await fetch('/wallet/recharge', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+        
+        if (response.redirected) {
+            // Backend redirige a factura
+            window.location.href = response.url;
+            return true;
+        }
+        
+        const data = await response.json();
+        if (data.invoiceId) {
+            window.location.href = `/wallet/${data.invoiceId}`;
+            return true;
+        }
+        
+        throw new Error(data.toast_error || 'Error completando recarga');
+    }
+    
+    // ─── Handler principal ───
+    async function handleSubmit(event) {
+        event.preventDefault();
+        
+        if (isProcessing) return;
+        
+        const amount = amountInput?.value;
+        if (!amount || parseFloat(amount) <= 0) {
+            showError('Ingresa un monto válido');
+            return;
+        }
+        
+        if (!cardElement || !cardElement._complete) {
+            showError('Completa los datos de la tarjeta');
+            return;
+        }
+        
+        setLoading(true);
+        hideError();
+        
+        try {
+            // 1. Crear PaymentIntent en backend
+            console.log('[Stripe] Creando PaymentIntent...');
+            const clientSecret = await createPaymentIntent(amount);
+            paymentIntentClientSecret = clientSecret;
+            
+            // 2. Confirmar con Stripe.js (muestra 3D Secure si aplica)
+            console.log('[Stripe] Confirmando pago...');
+            const paymentIntent = await confirmPayment(clientSecret);
+            
+            // 3. Completar en backend (crea factura)
+            console.log('[Stripe] Completando recarga...');
+            await completeRecharge(amount, paymentIntent.id);
+            
+        } catch (err) {
+            console.error('[Stripe] Error:', err);
+            showError(err.message || 'Error procesando pago. Intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    }
+    
+    // ─── Inicializar al cargar ───
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Solo inicializar si estamos en tab recarga
+        const isRechargeTab = document.querySelector('a[href="/wallet?tab=recharge"]')?.classList.contains('border-b-2');
+        
+        if (isRechargeTab || window.location.search.includes('tab=recharge')) {
+            await initStripe();
+        }
+        
+        // Re-inicializar al cambiar tabs (si usas HTMX o navegación)
+        document.querySelectorAll('a[href^="/wallet?tab="]').forEach(link => {
+            link.addEventListener('click', () => {
+                setTimeout(async () => {
+                    if (window.location.search.includes('tab=recharge')) {
+                        await initStripe();
+                    }
+                }, 100);
+            });
+        });
+    });
+    
+    // Exponer para debugging
+    window.__stripe_debug = {
+        getStripe: () => stripe,
+        getCardElement: () => cardElement,
+        reset: () => { cardElement?.clear(); hideError(); submitBtn.disabled = true; }
+    };
+    
+})();
+</script>
+
+<style>
+/* Estilos Stripe Elements personalizados */
+#stripe-card-element {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+#stripe-card-element:focus-within {
+    border-color: #1801a9;
+    box-shadow: 0 0 0 3px rgb(24 1 169 / 0.1);
+}
+
+/* Ocultar inputs originales cuando Stripe está activo */
+.stripe-active .original-card-inputs {
+    display: none;
+}
+
+/* Animación loading */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+</style>
