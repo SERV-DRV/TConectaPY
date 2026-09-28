@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     rate_limit_max: int = 100
     auth_rate_limit_max: int = 10
 
+    # ── Stripe (TEST) ──────────────────────────────────
+    stripe_secret_key: str = ""
+    stripe_api_version: str = "2024-06-20"
+    stripe_webhook_secret: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         if not self.allowed_origins:
