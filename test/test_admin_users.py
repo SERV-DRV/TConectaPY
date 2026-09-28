@@ -1,5 +1,7 @@
-import re
+import pytest
+@pytest.mark.integration
 from playwright.sync_api import Page, expect
+import re
 
 ADMIN_URL = "http://localhost:5173"
 

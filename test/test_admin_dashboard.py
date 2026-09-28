@@ -1,3 +1,5 @@
+import pytest
+@pytest.mark.integration
 from playwright.sync_api import Page, expect
 
 def test_admin_dashboard(login_admin: Page):
