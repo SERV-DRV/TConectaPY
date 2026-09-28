@@ -1,10 +1,9 @@
 import pytest
-@pytest.mark.integration
 from playwright.sync_api import Page, expect
 import re
-
 ADMIN_URL = "http://localhost:5173"
 
+@pytest.mark.integration
 def test_admin_create_user(login_admin: Page):
     # 1. Ir a usuarios
     login_admin.goto(f"{ADMIN_URL}/users")

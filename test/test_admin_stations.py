@@ -1,10 +1,9 @@
 import pytest
-@pytest.mark.integration
 from playwright.sync_api import Page, expect
 import re
-
 ADMIN_URL = "http://localhost:5173"
 
+@pytest.mark.integration
 def test_station_change_status(login_admin: Page):
     login_admin.goto(f"{ADMIN_URL}/stations")
     login_admin.locator("select[name='status']").first.wait_for(state="visible")
@@ -15,6 +14,7 @@ def test_station_change_status(login_admin: Page):
     # Verificar que la página recargó
     login_admin.locator("select[name='status']").first.wait_for(state="visible")
 
+@pytest.mark.integration
 def test_station_edit_modal(login_admin: Page):
     login_admin.goto(f"{ADMIN_URL}/stations")
     login_admin.get_by_role("button", name="Editar").first.wait_for(state="visible")
@@ -28,6 +28,7 @@ def test_station_edit_modal(login_admin: Page):
     # Cerrar modal
     login_admin.keyboard.press("Escape")
 
+@pytest.mark.integration
 def test_station_create_modal_opens(login_admin: Page):
     login_admin.goto(f"{ADMIN_URL}/stations")
     login_admin.get_by_role("button", name="+ Nueva Estacion").wait_for(state="visible")

@@ -1,10 +1,9 @@
 import pytest
-@pytest.mark.integration
 from playwright.sync_api import Page, expect
 import re
-
 ADMIN_URL = "http://localhost:5173"
 
+@pytest.mark.integration
 def test_bus_create(login_admin: Page):
     login_admin.goto(f"{ADMIN_URL}/buses")
     login_admin.get_by_role("button", name="+ Nuevo Bus").wait_for(state="visible")
@@ -19,6 +18,7 @@ def test_bus_create(login_admin: Page):
     expect(login_admin.locator("td", has_text="9999").first).to_be_visible()
     expect(login_admin.locator("td", has_text="U999XYZ").first).to_be_visible()
 
+@pytest.mark.integration
 def test_bus_change_status(login_admin: Page):
     login_admin.goto(f"{ADMIN_URL}/buses")
     login_admin.locator("select[name='status']").first.wait_for(state="visible")
@@ -29,6 +29,7 @@ def test_bus_change_status(login_admin: Page):
     # Verificar que la página recargó (el select vuelve a estar visible)
     login_admin.locator("select[name='status']").first.wait_for(state="visible")
 
+@pytest.mark.integration
 def test_bus_edit(login_admin: Page):
     login_admin.goto(f"{ADMIN_URL}/buses")
     login_admin.get_by_role("button", name="Editar").first.wait_for(state="visible")
