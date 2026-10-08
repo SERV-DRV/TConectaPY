@@ -40,8 +40,22 @@ class Settings(BaseSettings):
 
     # ── Stripe (TEST) ──────────────────────────────────
     stripe_secret_key: str = ""
-    stripe_api_version: str = "2024-06-20"
-    stripe_webhook_secret: str = ""
+    stripe_publishable_key: str = ""
+    stripe_api_version: str = "2026-08-26.dahlia"
+    stripe_webhook_secret: str = "whsec_Mh78SAQexAZu4bL8H2DFTlwqm44MHwCs"
+
+    # ── Environment Switch ─────────────────────────────
+    environment: str = "development"  # development | production
+
+    @property
+    def is_production(self) -> bool:
+        """True si ENVIRONMENT=production, False en development"""
+        return self.environment.lower() == "production"
+
+    @property
+    def use_stripe(self) -> bool:
+        """Usar Stripe solo en production con credenciales configuradas"""
+        return self.is_production and bool(self.stripe_secret_key)
 
     @property
     def cors_origins_list(self) -> list[str]:

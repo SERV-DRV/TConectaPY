@@ -41,6 +41,13 @@ class User(Base):
         nullable=False,
         default=True,
     )
+    # Controla si el usuario puede usar tarjetas de prueba Stripe (pm_card_visa, etc.)
+    # Solo para testing en production - en development no aplica
+    stripe_test_allowed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -48,4 +55,4 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User(id={self.id}, cui={self.cui}, email={self.email}, role={self.role})>"
+        return f"<User(id={self.id}, cui={self.cui}, email={self.email}, role={self.role}, stripe_test_allowed={self.stripe_test_allowed})>"

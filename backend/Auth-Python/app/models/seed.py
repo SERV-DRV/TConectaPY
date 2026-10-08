@@ -12,18 +12,21 @@ SEED_USERS = [
         "email": "admin@gmail.com",
         "password": "AdminTransmetro2026!",
         "role": "Admin",
+        "stripe_test_allowed": False,
     },
     {
         "cui": "1000000000001",
         "email": "admin2@gmail.com",
         "password": "Admin123!",
         "role": "Admin",
+        "stripe_test_allowed": False,
     },
     {
         "cui": "2000000000002",
         "email": "usuario@gmail.com",
         "password": "Usuario123!",
         "role": "User",
+        "stripe_test_allowed": True,  # Único usuario que puede usar pm_card_visa en Stripe
     },
 ]
 
@@ -42,6 +45,7 @@ async def seed_database() -> None:
                 password_hash=await hash_password(data["password"]),
                 role=data["role"],
                 is_active=True,
+                stripe_test_allowed=data["stripe_test_allowed"],
                 created_at=datetime.now(timezone.utc),
             )
             session.add(user)

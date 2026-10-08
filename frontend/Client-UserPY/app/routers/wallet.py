@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api_client import auth_request, client_request, get_invoice, get_invoices
 from app.main import require_auth
+from app.config import STRIPE_PUBLISHABLE_KEY
 from datetime import datetime
 import math
 
@@ -105,6 +106,7 @@ async def wallet_page(request: Request, tab: str = Query("recharge"), page: int 
         "user": user, "balance": balance,
         "tab": tab, "history": history, "invoices": invoices, "page": page, "total_pages": total_pages,
         "balance_last4": cui_last4, "expiry_date": expiry_date,
+        "stripe_publishable_key": STRIPE_PUBLISHABLE_KEY,
     })
 
 
@@ -152,5 +154,89 @@ async def purchase_card(request: Request, cardNumber: str = Form(...),
     except Exception as e:
         print(f"Error purchase: {e}")
         request.session["toast_error"] = "Error al comprar tarjeta"
+    return RedirectResponse("/wallet?tab=purchase", status_code=302)
+
+
+# ── Stripe Endpoints (Production) ─────────────────────────
+
+
+@router.post("/create-payment-intent")
+async def create_payment_intent(request: Request, amount: float = Form(...), type: str = Form("recharge")):
+    """
+    Crea PaymentIntent en Auth-Python para Stripe Elements.
+    
+    Retorna client_secret que el frontend usa con stripe.confirmCardPayment().
+    """
+    user = await require_auth(request)
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    token = request.session.get("token")
+    try:
+        result = await auth_request("POST", "/transaction/create-payment-intent", token=token, json={
+            "Amount": amount,
+            "TransactionType": type,
+        })
+        # Retornar client_secret para Stripe.js
+        return {
+            "client_secret": result.get("client_secret"),
+            "payment_intent_id": result.get("transactionId"),
+        }
+    except Exception as e:
+        print(f"Error creating payment intent: {e}")
+        raise HTTPException(status_code=500, detail="Error creando PaymentIntent")
+
+
+@router.post("/recharge-stripe")
+async def recharge_stripe(request: Request, payment_method_id: str = Form(...), amount: float = Form(...)):
+    """
+    Procesa recarga con Stripe PaymentMethod (Production).
+    
+    El frontend debe haber creado el PaymentMethod con Stripe Elements
+    y enviado el payment_method_id (ej: pm_card_visa).
+    """
+    user = await require_auth(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    
+    token = request.session.get("token")
+    try:
+        result = await auth_request("POST", "/transaction/recharge-stripe", token=token, json={
+            "PaymentMethodId": payment_method_id,
+            "Amount": amount,
+        })
+        if result.get("isSuccess") and result.get("invoiceId"):
+            request.session["toast_msg"] = f"Recarga exitosa de Q{amount}"
+            return RedirectResponse(f"/wallet/{result['invoiceId']}", status_code=302)
+        if not result.get("isSuccess"):
+            request.session["toast_error"] = result.get("message", "Error en la recarga")
+    except Exception as e:
+        print(f"Error stripe recharge: {e}")
+        request.session["toast_error"] = "Error al procesar recarga con Stripe"
+    return RedirectResponse("/wallet?tab=recharge", status_code=302)
+
+
+@router.post("/purchase-card-stripe")
+async def purchase_card_stripe(request: Request, payment_method_id: str = Form(...)):
+    """
+    Procesa compra de tarjeta ciudadana con Stripe (Production).
+    """
+    user = await require_auth(request)
+    if isinstance(user, RedirectResponse):
+        return user
+    
+    token = request.session.get("token")
+    try:
+        result = await auth_request("POST", "/transaction/purchase-card-stripe", token=token, json={
+            "PaymentMethodId": payment_method_id,
+        })
+        if result.get("isSuccess") and result.get("invoiceId"):
+            request.session["toast_msg"] = "Tarjeta ciudadana comprada con exito"
+            return RedirectResponse(f"/wallet/{result['invoiceId']}", status_code=302)
+        if not result.get("isSuccess"):
+            request.session["toast_error"] = result.get("message", "Error al comprar tarjeta")
+    except Exception as e:
+        print(f"Error stripe purchase: {e}")
+        request.session["toast_error"] = "Error al comprar tarjeta con Stripe"
     return RedirectResponse("/wallet?tab=purchase", status_code=302)
 

@@ -84,8 +84,51 @@
         <!-- Tab Body -->
         <div class="p-6 md:p-8">
             {% if tab == "recharge" %}
+            <!-- RECARGA TAB -->
+            {% if stripe_publishable_key %}
+            <!-- STRIPE ELEMENTS FORM (Production) -->
+            <form id="stripe-recharge-form" class="space-y-4 max-w-lg mx-auto">
+                <h2 class="text-lg font-bold text-[#1801a9] mb-4">Pasarela de Recarga Segura - Stripe</h2>
+                
+                <div>
+                    <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Monto a Recargar (GTQ)</label>
+                    <div class="grid grid-cols-4 gap-2 mb-2">
+                        <button type="button" onclick="setStripeAmount(10)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q10.00</button>
+                        <button type="button" onclick="setStripeAmount(20)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q20.00</button>
+                        <button type="button" onclick="setStripeAmount(50)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q50.00</button>
+                        <button type="button" onclick="setStripeAmount(100)" class="py-2 text-xs font-bold rounded-xl border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-[#1801a9]">Q100.00</button>
+                    </div>
+                    <input name="amount" id="stripe-amount" type="number" min="1" required placeholder="Ingrese el monto" class="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                </div>
+
+                <!-- Stripe Elements Card Element Container -->
+                <div>
+                    <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Datos de Tarjeta</label>
+                    <div id="card-element" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus-within:ring-2 focus-within:ring-[#46bf00]/50"></div>
+                    <div id="card-errors" class="text-red-500 text-xs mt-1 min-h-[16px]" role="alert"></div>
+                </div>
+
+                <button type="submit" id="stripe-recharge-btn" class="w-full bg-[#46bf00] hover:bg-[#3da300] text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="stripe-btn-text">Procesar Recarga</span>
+                    <span id="stripe-btn-loading" class="hidden">Procesando...</span>
+                </button>
+                
+                <p class="text-xs text-gray-500 text-center">
+                    {% if stripe_publishable_key.startswith('pk_test') %}
+                    🔒 Modo prueba - Usa <code class="font-mono bg-gray-100 px-1 rounded">pm_card_visa</code> para tarjetas de prueba
+                    {% else %}
+                    🔒 Pago seguro con Stripe - Tus datos de tarjeta nunca tocan nuestros servidores
+                    {% endif %}
+                </p>
+            </form>
+            
+            {% else %}
+            <!-- SIMULATION FORM (Development) -->
             <form method="post" action="/wallet/recharge" class="space-y-4 max-w-lg mx-auto">
-                <h2 class="text-lg font-bold text-[#1801a9] mb-4">Pasarela de Recarga Segura</h2>
+                <h2 class="text-lg font-bold text-[#1801a9] mb-4">Pasarela de Recarga Segura (Simulación)</h2>
+                <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
+                    <p class="text-xs text-yellow-800">⚠️ Modo desarrollo: Validación Luhn + simulación de pago</p>
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Monto a Recargar (GTQ)</label>
                     <div class="grid grid-cols-4 gap-2 mb-2">
@@ -98,7 +141,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Número de Tarjeta</label>
-                    <input name="cardNumber" type="text" maxlength="16" required placeholder="4532015112830366" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                    <input name="cardNumber" type="text" maxlength="16" required placeholder="4242 4242 4242 4242" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -111,11 +154,52 @@
                     </div>
                 </div>
                 <button type="submit" class="w-full bg-[#46bf00] hover:bg-[#3da300] text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm mt-4">
-                    Procesar Recarga
+                    Procesar Recarga (Simulación)
                 </button>
             </form>
+            {% endif %}
 
             {% elif tab == "purchase" %}
+            <!-- COMPRA TARJETA TAB -->
+            {% if stripe_publishable_key %}
+            <!-- STRIPE ELEMENTS FORM (Production) -->
+            <form id="stripe-purchase-form" class="space-y-4 max-w-lg mx-auto">
+                <div class="bg-[#46bf00]/20 border border-[#46bf00]/40 p-4 rounded-xl mb-4">
+                    <h3 class="font-bold text-[#1801a9] text-sm">Beneficios de la Tarjeta Ciudadana:</h3>
+                    <ul class="text-xs text-gray-700 list-disc list-inside mt-2 space-y-1">
+                        <li>Emisión de tarjeta virtual asociada a tu CUI.</li>
+                        <li>Acreditación inmediata de 5 viajes de cortesía.</li>
+                        <li>Acceso a torniquetes inteligentes de Transmetro y TuBus.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-4">
+                    <p class="text-xs text-blue-800"><strong>Precio fijo: Q20.00</strong> - Incluye tarjeta + 5 viajes de cortesía + Q20.00 saldo</p>
+                </div>
+
+                <!-- Stripe Elements Card Element Container -->
+                <div>
+                    <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Datos de Tarjeta</label>
+                    <div id="card-element-purchase" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus-within:ring-2 focus-within:ring-[#46bf00]/50"></div>
+                    <div id="card-errors-purchase" class="text-red-500 text-xs mt-1 min-h-[16px]" role="alert"></div>
+                </div>
+
+                <button type="submit" id="stripe-purchase-btn" class="w-full bg-[#1801a9] hover:opacity-90 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="stripe-purchase-btn-text">Comprar Tarjeta Ciudadana (Q20.00)</span>
+                    <span id="stripe-purchase-btn-loading" class="hidden">Procesando...</span>
+                </button>
+                
+                <p class="text-xs text-gray-500 text-center">
+                    {% if stripe_publishable_key.startswith('pk_test') %}
+                    🔒 Modo prueba - Usa <code class="font-mono bg-gray-100 px-1 rounded">pm_card_visa</code>
+                    {% else %}
+                    🔒 Pago seguro con Stripe
+                    {% endif %}
+                </p>
+            </form>
+            
+            {% else %}
+            <!-- SIMULATION FORM (Development) -->
             <form method="post" action="/wallet/purchase-card" class="space-y-4 max-w-lg mx-auto">
                 <div class="bg-[#46bf00]/20 border border-[#46bf00]/40 p-4 rounded-xl mb-4">
                     <h3 class="font-bold text-[#1801a9] text-sm">Beneficios de la Tarjeta Ciudadana:</h3>
@@ -125,9 +209,12 @@
                         <li>Acceso a torniquetes inteligentes de Transmetro y TuBus.</li>
                     </ul>
                 </div>
+                <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
+                    <p class="text-xs text-yellow-800">⚠️ Modo desarrollo: Validación Luhn + simulación de pago</p>
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-[#1801a9] uppercase mb-1">Número de Tarjeta</label>
-                    <input name="cardNumber" type="text" maxlength="16" required placeholder="4532015112830366" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
+                    <input name="cardNumber" type="text" maxlength="16" required placeholder="4242 4242 4242 4242" class="w-full px-3 py-2.5 text-sm font-mono bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#46bf00]/50">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -140,9 +227,10 @@
                     </div>
                 </div>
                 <button type="submit" class="w-full bg-[#1801a9] hover:opacity-90 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm mt-4">
-                    Comprar Tarjeta Ciudadana (Q20.00)
+                    Comprar Tarjeta Ciudadana (Q20.00) - Simulación
                 </button>
             </form>
+            {% endif %}
 
             {% elif tab == "history" %}
             <div class="space-y-4">
@@ -224,8 +312,14 @@
     </div>
 </div>
 
+<!-- Stripe.js CDN -->
+{% if stripe_publishable_key %}
+<script src="https://js.stripe.com/v3/" async></script>
+{% endif %}
+
 <script>
 function setAmount(val) { document.getElementById('amount').value = val; }
+function setStripeAmount(val) { document.getElementById('stripe-amount').value = val; }
 
 /* 3D Flip Card Logic */
 document.querySelectorAll('input[name="cvv"]').forEach(function(input) {
@@ -254,5 +348,210 @@ document.querySelectorAll('input[name="expirationDate"]').forEach(function(input
         document.getElementById('cardExpDisplay').textContent = this.value || '{{ expiry_date|default("12/28") }}';
     });
 });
+
+/* === STRIPE ELEMENTS INTEGRATION === */
+{% if stripe_publishable_key %}
+let stripe = null;
+let elements = null;
+let cardElement = null;
+let cardElementPurchase = null;
+let stripeInitialized = false;
+
+async function initStripe() {
+    if (stripeInitialized) return;
+    
+    // Esperar a que Stripe.js cargue
+    while (typeof Stripe === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
+    }
+    
+    stripe = Stripe('{{ stripe_publishable_key }}');
+    elements = stripe.elements();
+    
+    // Card Element para Recarga
+    cardElement = elements.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#1f2937',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                '::placeholder': { color: '#9ca3af' },
+            },
+            invalid: { color: '#ef4444', iconColor: '#ef4444' },
+        },
+    });
+    cardElement.mount('#card-element');
+    
+    // Card Element para Compra Tarjeta
+    cardElementPurchase = elements.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#1f2937',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                '::placeholder': { color: '#9ca3af' },
+            },
+            invalid: { color: '#ef4444', iconColor: '#ef4444' },
+        },
+    });
+    cardElementPurchase.mount('#card-element-purchase');
+    
+    // Manejar errores en tiempo real
+    cardElement.on('change', function(event) {
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
+    
+    cardElementPurchase.on('change', function(event) {
+        const displayError = document.getElementById('card-errors-purchase');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
+    
+    stripeInitialized = true;
+}
+
+// Inicializar Stripe cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', initStripe);
+
+/* === FORM SUBMIT HANDLERS === */
+
+// Recarga con Stripe
+document.addEventListener('submit', async function(e) {
+    if (e.target.id === 'stripe-recharge-form') {
+        e.preventDefault();
+        await handleStripeRecharge(e.target);
+    }
+    if (e.target.id === 'stripe-purchase-form') {
+        e.preventDefault();
+        await handleStripePurchase(e.target);
+    }
+});
+
+async function handleStripeRecharge(form) {
+    const btn = document.getElementById('stripe-recharge-btn');
+    const btnText = document.getElementById('stripe-btn-text');
+    const btnLoading = document.getElementById('stripe-btn-loading');
+    const amount = document.getElementById('stripe-amount').value;
+    
+    if (!amount || amount < 1) {
+        alert('Ingrese un monto válido');
+        return;
+    }
+    
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    
+    try {
+        // 1. Crear PaymentIntent en backend
+        const piResponse = await fetch('/wallet/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ amount, type: 'recharge' }),
+        });
+        
+        const piData = await piResponse.json();
+        if (!piData.client_secret) {
+            throw new Error('No se pudo crear PaymentIntent');
+        }
+        
+        // 2. Confirmar pago con Stripe Elements
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+            piData.client_secret,
+            { payment_method: { card: cardElement } }
+        );
+        
+        if (error) {
+            document.getElementById('card-errors').textContent = error.message;
+            throw new Error(error.message);
+        }
+        
+        if (paymentIntent.status === 'succeeded') {
+            // 3. Enviar payment_method_id al backend para completar
+            const pmResponse = await fetch('/wallet/recharge-stripe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ 
+                    payment_method_id: paymentIntent.payment_method,
+                    amount: amount 
+                }),
+            });
+            
+            // Redirect manejado por el servidor
+            window.location.href = pmResponse.url || '/wallet?tab=recharge';
+        }
+    } catch (err) {
+        console.error('Stripe recharge error:', err);
+        document.getElementById('card-errors').textContent = err.message || 'Error procesando pago';
+    } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+    }
+}
+
+async function handleStripePurchase(form) {
+    const btn = document.getElementById('stripe-purchase-btn');
+    const btnText = document.getElementById('stripe-purchase-btn-text');
+    const btnLoading = document.getElementById('stripe-purchase-btn-loading');
+    
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    
+    try {
+        // 1. Crear PaymentIntent para compra de tarjeta (Q20.00 fijo)
+        const piResponse = await fetch('/wallet/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ amount: 20, type: 'purchase_card' }),
+        });
+        
+        const piData = await piResponse.json();
+        if (!piData.client_secret) {
+            throw new Error('No se pudo crear PaymentIntent');
+        }
+        
+        // 2. Confirmar pago con Stripe Elements
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+            piData.client_secret,
+            { payment_method: { card: cardElementPurchase } }
+        );
+        
+        if (error) {
+            document.getElementById('card-errors-purchase').textContent = error.message;
+            throw new Error(error.message);
+        }
+        
+        if (paymentIntent.status === 'succeeded') {
+            // 3. Enviar payment_method_id al backend
+            const pmResponse = await fetch('/wallet/purchase-card-stripe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ 
+                    payment_method_id: paymentIntent.payment_method,
+                }),
+            });
+            
+            window.location.href = pmResponse.url || '/wallet?tab=purchase';
+        }
+    } catch (err) {
+        console.error('Stripe purchase error:', err);
+        document.getElementById('card-errors-purchase').textContent = err.message || 'Error procesando compra';
+    } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+    }
+}
+{% endif %}
 </script>
 {% endblock %}

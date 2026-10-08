@@ -86,3 +86,20 @@ async def get_invoice_by_id(invoice_id: str, user_id: str) -> Optional[dict]:
     except Exception as e:
         print(f"[InvoiceService] Error obteniendo factura: {e}")
         return None
+
+
+async def get_invoice_by_transaction_id(transaction_id: str) -> Optional[dict]:
+    """
+    Obtiene factura por transaction_id (PaymentIntent ID de Stripe).
+    No verifica ownership - usado internamente por webhooks.
+    """
+    try:
+        mongo_db = get_mongo_db()
+        invoice = await mongo_db.invoices.find_one({"transactionId": transaction_id})
+        if invoice:
+            invoice["_id"] = str(invoice["_id"])
+            invoice["fecha"] = invoice["fecha"].isoformat() if hasattr(invoice["fecha"], "isoformat") else str(invoice["fecha"])
+        return invoice
+    except Exception as e:
+        print(f"[InvoiceService] Error obteniendo factura por transaction_id: {e}")
+        return None

@@ -128,6 +128,18 @@ class TransactionRequest(BaseAuthSchema):
     )
 
 
+class StripeTransactionRequest(BaseAuthSchema):
+    Amount: float = Field(
+        validation_alias=AliasChoices("Amount", "amount"),
+        gt=0,
+    )
+    PaymentMethodId: str = Field(
+        validation_alias=AliasChoices("PaymentMethodId", "paymentMethodId"),
+        min_length=3,
+        pattern=r"^pm_",
+    )
+
+
 class TransactionResponse(BaseAuthSchema):
     isSuccess: bool
     message: str
