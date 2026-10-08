@@ -10,40 +10,46 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start Docker services
+      - name: Start Docker services (build local, no pull)
         run: |
           cd backend/Auth-Python
-          docker compose up -d
+          docker compose up -d --build
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
 
+      - name: Start Client-UserPY frontend
+        run: |
+          cd frontend/Client-UserPY
+          pip install -e .
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 5174 > /tmp/client-user.log 2>&1 &
+          sleep 5
+        env:
+          AUTH_URL: http://localhost:8080/api
+          ADMIN_URL: http://localhost:3001/TCONECTA/v1
+          CLIENT_URL: http://localhost:3002/TRANSMETRO-CONECTA-CLIENTE/v1
+          SECRET_KEY: test-secret-key
+          STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+
       - name: Wait for services to be healthy
         run: |
-          echo "Waiting for services..."
-          for i in $(seq 1 30); do
+          echo "Waiting for Auth server (8080)..."
+          for i in $(seq 1 40); do
             if curl -s http://localhost:8080/api/health > /dev/null 2>&1; then
               echo "Auth server ready"
               break
             fi
-            echo "Waiting... ($i/30)"
+            echo "Waiting... ($i/40)"
             sleep 5
           done
 
-          for i in $(seq 1 20); do
-            if curl -s http://localhost:5173 > /dev/null 2>&1; then
-              echo "Client Admin ready"
-              break
-            fi
-            sleep 3
-          done
-
-          for i in $(seq 1 20); do
+          echo "Waiting for Client-UserPY (5174)..."
+          for i in $(seq 1 30); do
             if curl -s http://localhost:5174 > /dev/null 2>&1; then
               echo "Client User ready"
               break
@@ -54,15 +60,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          pip install playwright pytest pytest-html pytest-playwright
+          pip install playwright pytest pytest-html pytest-playwright psycopg2-binary
           playwright install chromium --with-deps
 
-      - name: Run Playwright tests
-        run: pytest test/ -v --html=report.html --self-contained-html --junitxml=results.xml
+      - name: Run Playwright tests (exclude Stripe tests)
+        run: pytest test/ -v -k "not stripe" --html=report.html --self-contained-html --junitxml=results.xml
         env:
           CI: true
 
@@ -96,5 +102,7 @@ jobs:
         run: |
           cd backend/Auth-Python
           docker compose down -v
+          # Kill Client-UserPY if running
+          pkill -f "uvicorn app.main:app --port 5174" || true
         env:
           COMPOSE_PROJECT_NAME: transmetro-ci
