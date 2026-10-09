@@ -52,7 +52,11 @@ class Settings(BaseSettings):
     @property
     def async_database_url(self) -> str:
         if self.database_url:
-            return self.database_url
+            # Ensure asyncpg driver is used for async SQLAlchemy
+            url = self.database_url
+            if url.startswith("postgresql://") and "+asyncpg" not in url:
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return url
         return (
             f"postgresql+asyncpg://{self.db_username}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
