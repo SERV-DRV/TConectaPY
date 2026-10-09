@@ -1,3 +1,4 @@
+from urllib.parse import urlparse, parse_qs, urlunparse, urlencode
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -56,9 +57,21 @@ class Settings(BaseSettings):
             url = self.database_url
             if url.startswith("postgresql://") and "+asyncpg" not in url:
                 url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            # Render uses sslmode=require but asyncpg expects ssl=require
-            if "sslmode=" in url:
-                url = url.replace("sslmode=", "ssl=")
+            # Render adds psycopg2-specific params that asyncpg doesn't support
+            # Parse and clean query parameters
+            parsed = urlparse(url)
+            if parsed.query:
+                params = parse_qs(parsed.query, keep_blank_values=True)
+                # Convert sslmode to ssl
+                if "sslmode" in params:
+                    sslmode = params.pop("sslmode")[0]
+                    params["ssl"] = "require" if sslmode in ("require", "verify-ca", "verify-full") else sslmode
+                # Remove unsupported params
+                for key in ["channel_binding", "sslcert", "sslkey", "sslrootcert", "sslcrl", "sslcrldir"]:
+                    params.pop(key, None)
+                # Rebuild URL
+                new_query = urlencode(params, doseq=True)
+                url = urlunparse(parsed._replace(query=new_query))
             return url
         return (
             f"postgresql+asyncpg://{self.db_username}:{self.db_password}"
