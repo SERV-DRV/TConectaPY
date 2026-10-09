@@ -7,6 +7,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # ── Aplicación ──────────────────────────────────────
@@ -41,8 +42,19 @@ class Settings(BaseSettings):
 
     # ── Stripe (TEST) ──────────────────────────────────
     stripe_secret_key: str = ""
-    stripe_api_version: str = "2024-06-20"
+    stripe_publishable_key: str = ""
+    stripe_api_version: str = "2026-08-26.dahlia"
     stripe_webhook_secret: str = ""
+
+    @property
+    def is_production(self) -> bool:
+        """True si ENVIRONMENT=production, False en development"""
+        return self.node_env.lower() == "production"
+
+    @property
+    def use_stripe(self) -> bool:
+        """Usar Stripe solo en production con credenciales configuradas"""
+        return self.is_production and bool(self.stripe_secret_key)
 
     @property
     def cors_origins_list(self) -> list[str]:

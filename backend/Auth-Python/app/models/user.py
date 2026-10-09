@@ -46,6 +46,11 @@ class User(Base):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+    stripe_test_allowed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, cui={self.cui}, email={self.email}, role={self.role})>"

@@ -3,7 +3,8 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.api_client import auth_request, client_request, get_invoice, get_invoices
-from app.main import require_auth
+from app import config
+from app.auth_utils import require_auth
 from datetime import datetime
 import math
 
@@ -105,7 +106,26 @@ async def wallet_page(request: Request, tab: str = Query("recharge"), page: int 
         "user": user, "balance": balance,
         "tab": tab, "history": history, "invoices": invoices, "page": page, "total_pages": total_pages,
         "balance_last4": cui_last4, "expiry_date": expiry_date,
+        "stripe_publishable_key": config.STRIPE_PUBLISHABLE_KEY,
     })
+
+
+@router.post("/create-payment-intent")
+async def create_payment_intent(request: Request, amount: float = Form(...), type: str = Form("recharge")):
+    """Crea PaymentIntent en backend y retorna client_secret para Stripe.js"""
+    user = await require_auth(request)
+    if isinstance(user, RedirectResponse):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    token = request.session.get("token")
+    try:
+        result = await auth_request("POST", "/transaction/create-payment-intent", token=token, json={
+            "Amount": amount,
+            "Type": type.upper() if type == "recharge" else "COMPRA_TARJETA",
+        })
+        return {"client_secret": result.get("client_secret"), "payment_intent_id": result.get("payment_intent_id")}
+    except Exception as e:
+        print(f"Error create payment intent: {e}")
+        raise HTTPException(status_code=400, detail="Error creando PaymentIntent")
 
 
 @router.post("/recharge")

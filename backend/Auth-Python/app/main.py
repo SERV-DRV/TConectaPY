@@ -9,7 +9,7 @@ from app.config import settings
 from app.database import close_db, init_db
 from app.database_mongo import connect_mongo, close_mongo, get_mongo_db
 from app.models.seed import seed_database
-from app.routers import auth, transaction, wallet
+from app.routers import auth, transaction, wallet, stripe_webhook
 
 
 async def create_invoice_indexes():
@@ -80,6 +80,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth.router, prefix="/api/Auth", tags=["Auth"])
 app.include_router(transaction.router, prefix="/api/transaction", tags=["Transaction"])
 app.include_router(wallet.router, prefix="/api/wallets", tags=["Wallet"])
+app.include_router(stripe_webhook.router, prefix="/api/stripe", tags=["Stripe Webhook"])
 
 
 @app.get("/api/health")
