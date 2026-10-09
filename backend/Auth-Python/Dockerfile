@@ -3,7 +3,7 @@
 # Instala SOLO las dependencias de producción con uv para un resultado
 # determinístico y reproducible (equivalente a 'npm ci' de Node.js).
 # ─────────────────────────────────────────────────────────────────────────────
-FROM python:3.14-slim AS deps
+FROM python:3.12-slim AS deps
 
 # Instalar uv (gestor de dependencias ultrarrápido)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -22,7 +22,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Solo contiene el código fuente y las dependencias de producción.
 # Sin dependencias de desarrollo, sin caché de uv, sin código innecesario.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM python:3.14-slim AS runner
+FROM python:3.12-slim AS runner
 
 # Metadata de la imagen
 LABEL maintainer="TransmetroConecta DevOps"
