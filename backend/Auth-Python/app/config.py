@@ -56,6 +56,9 @@ class Settings(BaseSettings):
             url = self.database_url
             if url.startswith("postgresql://") and "+asyncpg" not in url:
                 url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            # Render uses sslmode=require but asyncpg expects ssl=require
+            if "sslmode=" in url:
+                url = url.replace("sslmode=", "ssl=")
             return url
         return (
             f"postgresql+asyncpg://{self.db_username}:{self.db_password}"
